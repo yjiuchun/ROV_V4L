@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="rov_sim">
+
+    <xacro:include filename="$(find rov_description)/src/env/xacro/base_link.xacro" />
+    <xacro:include filename="$(find rov_description)/src/env/xacro/wheel.xacro" />
+    <xacro:include filename="$(find rov_description)/src/env/xacro/fun_define.xacro" />
+    <xacro:include filename="$(find rov_description)/src/env/xacro/camera.xacro" />
+<!--base_link->wheel_l_f-->
+<xacro:myjoint_continuous joint_name="base_to_wheel_l_f" joint_type="continuous" x="0.1" y="0.125" z="0" wx="0" wy="0" wz="0" parent_link="base_link" child_link="wheel_l_f" ax="0" ay="1" az="0"/>
+
+<!--base_link->wheel_r_f-->
+<xacro:myjoint_continuous joint_name="base_to_wheel_r_f" joint_type="continuous" x="0.1" y="-0.125" z="0" wx="0" wy="0" wz="0" parent_link="base_link" child_link="wheel_r_f" ax="0" ay="-1" az="0"/>
+
+<!--base_link->wheel_l_b-->
+<xacro:myjoint_continuous joint_name="base_to_wheel_l_b" joint_type="continuous" x="-0.1" y="0.125" z="0" wx="0" wy="0" wz="0" parent_link="base_link" child_link="wheel_l_b" ax="0" ay="1" az="0"/>
+
+<!--base_link->wheel_r_b-->
+<xacro:myjoint_continuous joint_name="base_to_wheel_r_b" joint_type="continuous" x="-0.1" y="-0.125" z="0" wx="0" wy="0" wz="0" parent_link="base_link" child_link="wheel_r_b" ax="0" ay="-1" az="0"/>
+
+<!--base_footprint->base_link-->
+<xacro:myjoint_fixed joint_name="base_footprint_joint" joint_type="fixed" x="0" y="0" z="0.1" wx="0" wz="0.0" wy="0" parent_link="base_footprint" child_link="base_link"/>
+
+<!-- base_link->camera_link -->
+<xacro:myjoint_fixed joint_name="camera_joint" joint_type="fixed" x="0" y="0" z="1" wx="0" wz="0.0" wy="0" parent_link="base_link" child_link="camera_link"/>
+
+
+<!-- 每一个驱动轮都需要配置传动装置 -->
+    <xacro:joint_trans_v1 joint_name="base_to_wheel_l_f"/>
+    <xacro:joint_trans_v1 joint_name="base_to_wheel_l_b" />
+    <xacro:joint_trans_v1 joint_name="base_to_wheel_r_f" />
+    <xacro:joint_trans_v1 joint_name="base_to_wheel_r_b" />
+
+  <gazebo>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+                <rosDebugLevel>Debug</rosDebugLevel>
+                <publishWheelTF>true</publishWheelTF>
+                <robotNamespace>/</robotNamespace>
+                <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+                <publishTf>1</publishTf>
+                <publishWheelJointState>true</publishWheelJointState>
+                <alwaysOn>true</alwaysOn>
+                <updateRate>100.0</updateRate>
+                <legacyMode>true</legacyMode>
+    </plugin>
+  </gazebo>
+
+<!-- 麦轮控制器 -->
+<gazebo>
+    <plugin name="mecanum_controller" filename="libgazebo_ros_planar_move.so">
+        <commandTopic>cmd_vel</commandTopic>
+        <odometryTopic>odom</odometryTopic>
+        <odometryFrame>odom</odometryFrame>
+        <leftFrontJoint>base_to_wheel_l_f</leftFrontJoint>
+        <rightFrontJoint>base_to_wheel_r_f</rightFrontJoint>
+        <leftRearJoint>base_to_wheel_l_b</leftRearJoint>
+        <rightRearJoint>base_to_wheel_r_b</rightRearJoint>
+        <odometryRate>100</odometryRate>
+        <robotBaseFrame>base_footprint</robotBaseFrame>
+        <broadcastTF>1</broadcastTF>
+    </plugin>
+</gazebo>
+
+</robot>
