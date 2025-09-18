@@ -9,7 +9,7 @@
 <joint name="world_to_led_base" type="fixed">
     <parent link="world"/>
     <child link="led_base_link"/>
-    <origin xyz="2 0 1" rpy="0 ${M_PI/2} 0"/>
+    <origin xyz="2 0 1" rpy="0 ${-M_PI/2} 0"/>
 </joint>
 
 

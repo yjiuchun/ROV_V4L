@@ -1,0 +1,12 @@
+<launch>
+    <!-- PnP视觉定位系统启动文件 -->
+    
+    <!-- PnP视觉定位节点 -->
+    <node name="pnp_vision" pkg="vision_location" type="pnp_vision.py" output="screen">
+        <remap from="/camera/image_raw" to="/camera/image_raw"/>
+    </node>
+    
+    <!-- 可选：启动图像查看器 -->
+    <node name="image_viewer" pkg="image_view" type="image_view" args="image:=/camera/image_raw" if="false"/>
+    
+</launch>
