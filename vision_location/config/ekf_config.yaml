@@ -1,0 +1,137 @@
+# EKF视觉定位系统配置文件
+
+# EKF参数配置
+ekf_params:
+  # 过程噪声参数
+  process_noise_position: 0.01      # 位置过程噪声
+  process_noise_velocity: 0.1       # 速度过程噪声
+  process_noise_orientation: 0.01   # 姿态过程噪声
+  
+  # 观测噪声参数
+  observation_noise_position: 0.1   # 位置观测噪声
+  observation_noise_orientation: 0.1 # 姿态观测噪声
+  
+  # 初始协方差参数
+  initial_covariance_position: 1.0  # 初始位置协方差
+  initial_covariance_velocity: 1.0  # 初始速度协方差
+  initial_covariance_orientation: 1.0 # 初始姿态协方差
+  
+  # 系统参数
+  update_rate: 30.0                 # 更新频率 (Hz)
+  prediction_only_mode: false       # 仅预测模式（无观测更新）
+
+# 运动模型参数
+motion_model:
+  # 运动类型: "constant_velocity", "constant_acceleration", "constant_turn"
+  type: "constant_velocity"
+  
+  # 加速度限制 (m/s²)
+  max_acceleration: 2.0
+  max_angular_acceleration: 1.0
+  
+  # 速度限制 (m/s)
+  max_velocity: 5.0
+  max_angular_velocity: 2.0
+
+# 观测模型参数
+observation_model:
+  # 观测类型: "pose", "position_only", "orientation_only"
+  type: "pose"
+  
+  # 观测有效性检查
+  position_valid_range: [0.1, 10.0]  # 位置有效范围 (m)
+  orientation_valid_range: [0.8, 1.2] # 四元数模长有效范围
+  
+  # 异常值检测
+  outlier_detection:
+    enabled: true
+    chi_square_threshold: 9.21  # 95%置信度阈值
+    max_outliers: 3             # 最大连续异常值数量
+
+# 自适应参数调整
+adaptive_params:
+  enabled: true
+  
+  # 噪声自适应
+  noise_adaptation:
+    enabled: true
+    adaptation_rate: 0.01       # 自适应速率
+    min_noise: 0.001           # 最小噪声
+    max_noise: 1.0             # 最大噪声
+  
+  # 协方差膨胀
+  covariance_inflation:
+    enabled: true
+    inflation_factor: 1.1      # 膨胀因子
+    trigger_threshold: 0.5     # 触发阈值
+
+# 数据记录参数
+data_logging:
+  enabled: true
+  log_file: "ekf_log.csv"
+  log_interval: 1.0            # 记录间隔 (秒)
+  
+  # 记录内容
+  log_states: true             # 记录状态
+  log_covariances: true        # 记录协方差
+  log_innovations: true        # 记录新息
+  log_measurements: true       # 记录观测
+
+# 调试参数
+debug:
+  enabled: false
+  print_interval: 5.0          # 打印间隔 (秒)
+  plot_enabled: false          # 是否启用绘图
+  save_plots: false            # 是否保存图像
+
+# 性能优化参数
+performance:
+  # 数值稳定性
+  numerical_stability:
+    min_eigenvalue: 1e-6       # 最小特征值
+    max_condition_number: 1e12 # 最大条件数
+  
+  # 计算优化
+  computation_optimization:
+    use_sparse_matrices: false # 使用稀疏矩阵
+    parallel_processing: false # 并行处理
+    gpu_acceleration: false    # GPU加速
+
+# 坐标系配置
+coordinate_frames:
+  source_frame: "camera_link"  # 源坐标系
+  target_frame: "target_link"  # 目标坐标系
+  world_frame: "world"         # 世界坐标系
+
+# 话题配置
+topics:
+  input:
+    pnp_pose: "/vision/estimated_pose"      # PnP位姿输入
+    imu_data: "/imu/data"                   # IMU数据输入（可选）
+    odometry: "/odom"                       # 里程计数据输入（可选）
+  
+  output:
+    ekf_pose: "/vision/ekf_pose"            # EKF位姿输出
+    ekf_pose_covariance: "/vision/ekf_pose_covariance" # 带协方差的位姿
+    estimated_velocity: "/vision/estimated_velocity"   # 速度估计
+    ekf_status: "/vision/ekf_status"        # EKF状态信息
+
+# 滤波器重置条件
+reset_conditions:
+  # 位置重置
+  position_reset:
+    enabled: true
+    threshold: 5.0             # 位置跳变阈值 (m)
+    max_resets: 3              # 最大重置次数
+  
+  # 姿态重置
+  orientation_reset:
+    enabled: true
+    threshold: 0.5             # 姿态跳变阈值
+    max_resets: 3              # 最大重置次数
+  
+  # 协方差重置
+  covariance_reset:
+    enabled: true
+    threshold: 10.0            # 协方差阈值
+    reset_factor: 2.0          # 重置因子

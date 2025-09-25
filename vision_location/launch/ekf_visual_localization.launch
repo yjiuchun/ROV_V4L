@@ -1,0 +1,40 @@
+<launch>
+    <!-- EKF视觉定位系统启动文件 -->
+    
+    <!-- 参数配置 -->
+    <arg name="config_file" default="$(find vision_location)/config/ekf_config.yaml" />
+    <arg name="source_frame" default="camera_link" />
+    <arg name="target_frame" default="target_link" />
+    <arg name="update_rate" default="30.0" />
+    
+    <!-- EKF节点 -->
+    <node name="ekf_visual_localization" pkg="vision_location" type="ekf.py" output="screen">
+        <!-- 加载配置文件 -->
+        <rosparam file="$(arg config_file)" command="load" />
+        
+        <!-- 参数覆盖 -->
+        <param name="source_frame" value="$(arg source_frame)" />
+        <param name="target_frame" value="$(arg target_frame)" />
+        <param name="update_rate" value="$(arg update_rate)" />
+        
+        <!-- 话题重映射 -->
+        <remap from="/vision/estimated_pose" to="/vision/estimated_pose" />
+        <remap from="/vision/ekf_pose" to="/vision/ekf_pose" />
+        <remap from="/vision/ekf_pose_covariance" to="/vision/ekf_pose_covariance" />
+        <remap from="/vision/estimated_velocity" to="/vision/estimated_velocity" />
+    </node>
+    
+    <!-- 可选：启动rviz可视化 -->
+    <arg name="rviz" default="false" />
+    <node if="$(arg rviz)" name="rviz" pkg="rviz" type="rviz" 
+          args="-d $(find vision_location)/config/ekf_visualization.rviz" />
+    
+    <!-- 可选：启动数据记录节点 -->
+    <arg name="data_logging" default="false" />
+    <node if="$(arg data_logging)" name="ekf_data_logger" pkg="vision_location" type="ekf_data_logger.py" output="screen">
+        <param name="log_file" value="$(find vision_location)/logs/ekf_data.csv" />
+        <param name="log_interval" value="1.0" />
+    </node>
+    
+</launch>
+

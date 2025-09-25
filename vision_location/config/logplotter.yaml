@@ -1,0 +1,36 @@
+# 日志绘图器配置文件
+
+# 数据存储参数
+data_params:
+  max_points: 1000          # 最大存储点数
+  update_rate: 30           # 数据更新频率 (Hz)
+  plot_update_rate: 10      # 绘图更新频率 (Hz)
+
+# 绘图参数
+plot_params:
+  figure_size: [12, 8]      # 图形大小 [宽, 高]
+  line_width: 2             # 线条宽度
+  grid_enabled: true        # 是否显示网格
+  legend_enabled: true      # 是否显示图例
+
+# 颜色配置
+colors:
+  position_x: 'red'         # X位置颜色
+  position_y: 'green'       # Y位置颜色
+  position_z: 'blue'        # Z位置颜色
+  orientation_x: 'red'      # X方向颜色
+  orientation_y: 'green'    # Y方向颜色
+  orientation_z: 'blue'     # Z方向颜色
+  orientation_w: 'black'    # W方向颜色
+
+# TF 配置
+tf_config:
+  source_frame: 'base_footprint'     # 源坐标系
+  target_frame: 'camera_link'  # 目标坐标系
+  timeout: 1.0              # TF 查找超时时间 (秒)
+
+# 日志配置
+logging:
+  print_interval: 30        # 打印间隔 (数据点数)
+  save_auto: true           # 自动保存
+  save_format: 'npz'        # 保存格式 (npz, csv, json)

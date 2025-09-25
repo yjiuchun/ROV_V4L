@@ -20,10 +20,10 @@
     <!-- 加载机器人URDF/Xacro模型 -->
     <arg name="urdf_file1" default="$(find xacro)/xacro --inorder '$(find rov_description)/src/env/xacro/led.xacro'" />
     <arg name="urdf_file2" default="$(find xacro)/xacro --inorder '$(find rov_description)/src/env/xacro/rov_sim.xacro'" />
-    <param name="robot_description" command="$(arg urdf_file1)" />
-    <param name="robot_description2" command="$(arg urdf_file2)" />
-    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model led_sim" />
-    <node name="spawn_urdf2" pkg="gazebo_ros" type="spawn_model" args="-param robot_description2 -urdf -model rov_sim" />
+    <param name="robot_description1" command="$(arg urdf_file1)" />
+    <param name="robot_description" command="$(arg urdf_file2)" />
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description1 -urdf -model led_sim" />
+    <node name="spawn_urdf2" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model rov_sim" />
 
 	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
 

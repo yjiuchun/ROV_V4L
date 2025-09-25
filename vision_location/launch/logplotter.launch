@@ -1,0 +1,10 @@
+<launch>
+    <!-- 日志绘图器启动文件 -->
+    
+    <!-- 日志绘图器节点 -->
+    <node name="log_plotter" pkg="vision_location" type="logplotter.py" output="screen">
+        <!-- 可选：加载配置文件 -->
+        <!-- <rosparam file="$(find vision_location)/config/logplotter.yaml" command="load" /> -->
+    </node>
+    
+</launch>

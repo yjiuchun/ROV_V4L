@@ -5,6 +5,10 @@
     <xacro:include filename="$(find rov_description)/src/env/xacro/wheel.xacro" />
     <xacro:include filename="$(find rov_description)/src/env/xacro/fun_define.xacro" />
     <xacro:include filename="$(find rov_description)/src/env/xacro/camera.xacro" />
+
+<!--base_footprint->base_link-->
+<xacro:myjoint_fixed joint_name="base_footprint_joint" joint_type="fixed" x="0" y="0" z="0.1" wx="0" wz="0.0" wy="0" parent_link="base_footprint" child_link="base_link"/>
+
 <!--base_link->wheel_l_f-->
 <xacro:myjoint_continuous joint_name="base_to_wheel_l_f" joint_type="continuous" x="0.1" y="0.125" z="0" wx="0" wy="0" wz="0" parent_link="base_link" child_link="wheel_l_f" ax="0" ay="1" az="0"/>
 
@@ -17,8 +21,6 @@
 <!--base_link->wheel_r_b-->
 <xacro:myjoint_continuous joint_name="base_to_wheel_r_b" joint_type="continuous" x="-0.1" y="-0.125" z="0" wx="0" wy="0" wz="0" parent_link="base_link" child_link="wheel_r_b" ax="0" ay="-1" az="0"/>
 
-<!--base_footprint->base_link-->
-<xacro:myjoint_fixed joint_name="base_footprint_joint" joint_type="fixed" x="0" y="0" z="0.1" wx="0" wz="0.0" wy="0" parent_link="base_footprint" child_link="base_link"/>
 
 <!-- base_link->camera_link -->
 <xacro:myjoint_fixed joint_name="camera_joint" joint_type="fixed" x="0" y="0" z="1" wx="0" wz="0.0" wy="0" parent_link="base_link" child_link="camera_link"/>

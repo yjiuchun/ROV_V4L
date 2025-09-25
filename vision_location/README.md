@@ -15,12 +15,22 @@
 ```
 vision_location/
 ├── src/
-│   ├── image_subscriber.py    # 图像订阅节点
-│   └── vision_processor.py    # 视觉处理节点
+│   ├── pnp_vision.py          # PnP视觉定位节点
+│   └── pnp_vision_advanced.py # 高级PnP视觉定位节点
 ├── scripts/
-│   └── test_camera.py         # 相机测试脚本
+│   ├── detector.py            # 特征检测器
+│   ├── logplotter.py          # 简化日志绘图器
+│   ├── pnp_solver.py          # PnP求解器
+│   ├── pose_tf.py             # 位姿TF处理
+│   └── test_logplotter.py     # 日志绘图器测试
+├── config/
+│   ├── color_detection.yaml   # 颜色检测配置
+│   ├── detector.yaml          # 检测器配置
+│   ├── logplotter.yaml        # 日志绘图器配置
+│   └── pnp.yaml               # PnP配置
 ├── launch/
-│   └── vision_location.launch # 启动文件
+│   ├── logplotter.launch      # 日志绘图器启动文件
+│   └── pnp_vision.launch      # PnP视觉定位启动文件
 ├── package.xml
 ├── CMakeLists.txt
 └── README.md
@@ -56,12 +66,50 @@ rosrun vision_location image_subscriber.py
 rosrun vision_location vision_processor.py
 ```
 
-### 4. 测试相机
+### 4. 使用日志绘图器
 
 ```bash
-# 运行相机测试脚本
-rosrun vision_location test_camera.py
+# 启动日志绘图器 (获取camera_link位姿)
+roslaunch vision_location logplotter.launch
+
+# 或者直接运行
+rosrun vision_location logplotter.py
+
+# 测试日志绘图器
+rosrun vision_location test_logplotter.py
 ```
+
+### 5. 使用PnP视觉定位
+
+```bash
+# 启动PnP视觉定位系统
+roslaunch vision_location pnp_vision.launch
+```
+
+## 日志绘图器 (LogPlotter)
+
+### 功能说明
+简化的日志绘图器专门用于获取和记录 `camera_link` 在世界坐标系中的位姿。
+
+### 主要特性
+- 实时获取 `camera_link` 相对于 `world` 坐标系的位姿
+- 在控制台输出位姿信息 (位置和姿态)
+- 自动保存数据到 NPZ 格式文件
+- 可配置更新频率和打印间隔
+
+### 输出示例
+```
+[0010] 时间: 1234.567s
+     位置: (0.123456, 0.456789, 0.789012)
+     姿态: (0.000000, 0.000000, 0.000000, 1.000000)
+--------------------------------------------------
+```
+
+### 配置参数
+- `source_frame`: 源坐标系 (默认: 'base_footprint')
+- `target_frame`: 目标坐标系 (默认: 'camera_link')
+- `update_rate`: 数据更新频率 (默认: 10 Hz)
+- `print_interval`: 打印间隔 (默认: 每10次打印一次)
 
 ## 话题说明
 
