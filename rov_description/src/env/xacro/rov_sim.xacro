@@ -5,7 +5,7 @@
     <xacro:include filename="$(find rov_description)/src/env/xacro/wheel.xacro" />
     <xacro:include filename="$(find rov_description)/src/env/xacro/fun_define.xacro" />
     <xacro:include filename="$(find rov_description)/src/env/xacro/camera.xacro" />
-
+    <xacro:include filename="$(find rov_description)/src/env/xacro/zed2.xacro" />
 <!--base_footprint->base_link-->
 <xacro:myjoint_fixed joint_name="base_footprint_joint" joint_type="fixed" x="0" y="0" z="0.1" wx="0" wz="0.0" wy="0" parent_link="base_footprint" child_link="base_link"/>
 
@@ -25,6 +25,11 @@
 <!-- base_link->camera_link -->
 <xacro:myjoint_fixed joint_name="camera_joint" joint_type="fixed" x="0" y="0" z="1" wx="0" wz="0.0" wy="0" parent_link="base_link" child_link="camera_link"/>
 
+<!-- zed -->
+<xacro:mylink_tri myname="zed2_link" l="0.05" w="0.15" h="0.05" x="0" y="0" z="0.04" wx="0" wy="0" wz="0" color="red" r="0" g="0" b="0" a="1" mass="0.1" ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+<xacro:myjoint_fixed joint_name="zed2_joint" joint_type="fixed" x="0" y="0" z="0.5" wx="0" wz="0.0" wy="0" parent_link="base_link" child_link="zed2_link"/>
+<xacro:zed2 youlinkname="zed2_link"/>
+<xacro:zed2_gazebo/>
 
 <!-- 每一个驱动轮都需要配置传动装置 -->
     <xacro:joint_trans_v1 joint_name="base_to_wheel_l_f"/>

@@ -28,11 +28,11 @@ class SimpleLogPlotter:
         
         # 话题订阅
         self.estimated_pose_sub = rospy.Subscriber('/vision/estimated_pose', PoseStamped, self.estimated_pose_callback)
-        
+        self.estimated_ekf_pose_sub = rospy.Subscriber('/vision/ekf_pose', PoseStamped, self.estimated_ekf_pose_callback)
         # 话题发布
         self.pos_error_pub = rospy.Publisher('/vision/position_error', Vector3, queue_size=10)
         self.pos_error_array_pub = rospy.Publisher('/vision/position_error_array', Float64MultiArray, queue_size=10)
-        
+        self.ekf_error_pub = rospy.Publisher('/vision/ekf_error', Vector3, queue_size=10)       
         # 配置参数
         self.source_frame = rospy.get_param('~source_frame', 'odom')
         self.target_frame = rospy.get_param('~target_frame', 'camera_link')
@@ -52,9 +52,14 @@ class SimpleLogPlotter:
         self.estimated_pos = [0, 0, 0]
         self.estimated_ori = [0, 0, 0, 1]
         self.estimated_pose_received = False
+        self.estimated_ekf_pos = [0, 0, 0]
+        self.estimated_ekf_ori = [0, 0, 0, 1]
+        self.estimated_ekf_pose_received = False
 
         self.pos_error = [0, 0, 0]
         self.ori_error = [0, 0, 0, 0]
+        self.ekf_pos_error = [0, 0, 0]
+        self.ekf_ori_error = [0, 0, 0, 0]
         
         # 绘图相关
         self.max_points = 1000  # 最大显示点数
@@ -84,6 +89,19 @@ class SimpleLogPlotter:
         self.estimated_ori[3] = msg.pose.orientation.w
         
         self.estimated_pose_received = True
+    
+    def estimated_ekf_pose_callback(self, msg):
+        """处理估计EKF位姿话题回调"""
+        self.estimated_ekf_pos[0] = msg.pose.position.x
+        self.estimated_ekf_pos[1] = msg.pose.position.y
+        self.estimated_ekf_pos[2] = msg.pose.position.z
+    
+        self.estimated_ekf_ori[0] = msg.pose.orientation.x
+        self.estimated_ekf_ori[1] = msg.pose.orientation.y
+        self.estimated_ekf_ori[2] = msg.pose.orientation.z
+        self.estimated_ekf_ori[3] = msg.pose.orientation.w
+        
+        self.estimated_ekf_pose_received = True
     
     def setup_plot(self):
         """设置绘图"""
@@ -232,8 +250,27 @@ class SimpleLogPlotter:
         else:
             # 使用订阅的估计位姿计算误差
             self.pos_error[0] = self.estimated_pos[0] - 2 + self.real_pos[0]
-            self.pos_error[1] = self.estimated_pos[1] + self.real_pos[1]
+            self.pos_error[1] = self.estimated_pos[1] - self.real_pos[1]
             self.pos_error[2] = self.estimated_pos[2] + 1 - self.real_pos[2]
+        if not self.estimated_ekf_pose_received:
+            # 如果没有估计EKF位姿数据，生成一些测试数据来显示曲线
+            import random
+            import math
+            
+            # 生成基于时间的测试数据
+            time_offset = current_time - (self.start_time if hasattr(self, 'start_time') else current_time)
+            if not hasattr(self, 'start_time'):
+                self.start_time = current_time
+        
+            # 生成正弦波测试数据
+            self.ekf_pos_error[0] = 0.1 * math.sin(time_offset * 0.5) + random.uniform(-0.02, 0.02)
+            self.ekf_pos_error[1] = 0.05 * math.cos(time_offset * 0.3) + random.uniform(-0.01, 0.01)
+            self.ekf_pos_error[2] = 0.02 * math.sin(time_offset * 0.7) + random.uniform(-0.005, 0.005)
+        else:
+            # 使用订阅的估计EKF位姿计算误差
+            self.ekf_pos_error[0] = self.estimated_ekf_pos[0] - 2 + self.real_pos[0]
+            self.ekf_pos_error[1] = self.estimated_ekf_pos[1] - self.real_pos[1]
+            self.ekf_pos_error[2] = self.estimated_ekf_pos[2] + 1 - self.real_pos[2]
         
         # 更新绘图数据
         self.time_data.append(current_time)
@@ -243,6 +280,7 @@ class SimpleLogPlotter:
         
         # 发布位置误差话题
         self.publish_position_error()
+        self.publish_ekf_position_error()
     
     def publish_position_error(self):
         """发布位置误差话题"""
@@ -264,6 +302,14 @@ class SimpleLogPlotter:
         ]
         self.pos_error_array_pub.publish(array_msg)
     
+    def publish_ekf_position_error(self):
+        """发布EKF位置误差话题"""
+        error_msg = Vector3()
+        error_msg.x = self.ekf_pos_error[0]
+        error_msg.y = self.ekf_pos_error[1]
+        error_msg.z = self.ekf_pos_error[2]
+        self.ekf_error_pub.publish(error_msg)
+
     def save_data(self):
         """保存数据到文件"""
         if not self.pose_data:
