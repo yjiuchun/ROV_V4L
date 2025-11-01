@@ -14,21 +14,22 @@ from pose_tf import PoseTF
 
 
 class Detector:
-    def __init__(self):
+    def __init__(self,config_name='detector.yaml',folder='/home/yjc/Project/rov_ws/src/vision_location/',show_image=False):
         # 初始化默认参数
         self.color_ranges = {}
         self.min_area = 100
         self.circularity_threshold = 0.7
         self.kernel_size = 5
         self.bridge = CvBridge()
+        self.show_image = show_image
         
         # 加载配置
-        self.load_config()
+        self.load_config(config_name,folder)
 
 
-    def load_config(self):
+    def load_config(self,config_name,folder):
         """从配置文件加载参数"""
-        config_path = os.path.join(os.path.dirname(__file__), '../config/detector.yaml')
+        config_path = os.path.join(folder, 'config/',config_name)
         
         try:
             with open(config_path, 'r') as file:
@@ -120,11 +121,12 @@ class Detector:
                             # 在图像上标记检测到的点
                             cv2.circle(image, (cx, cy), 5, (0, 255, 0), -1)
                             cv2.putText(image, color, (cx+10, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-        
-        # 显示处理后的图像
-        cv2.imshow("PnP Feature Detection", image)
-        cv2.waitKey(1)
-        return np.array(feature_points, dtype=np.float32)
+        return image
+        if self.show_image:
+            # 显示处理后的图像
+            cv2.imshow("PnP Feature Detection", image)
+            cv2.waitKey(1)
+            return np.array(feature_points, dtype=np.float32)
 
     def is_circular(self, contour):
         """检查轮廓是否为圆形"""
@@ -141,7 +143,7 @@ class Detector:
         circularity = 4 * np.pi * area / (perimeter * perimeter)
         
         # 圆形度接近1表示更接近圆形
-        return circularity > self.circularity_threshold
+        return 1
 
 
 if __name__ == '__main__':

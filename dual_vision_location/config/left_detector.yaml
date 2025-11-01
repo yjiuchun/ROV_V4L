@@ -1,0 +1,25 @@
+# HSV颜色范围定义
+color_ranges:
+  red:
+    - lower: [0, 45, 40]
+      upper: [10, 255, 255]
+    - lower: [170, 50, 50]
+      upper: [180, 255, 255]
+  
+  yellow:
+    - lower: [20, 50, 50]
+      upper: [30, 255, 255]
+  
+  blue:
+    - lower: [100, 50, 50]
+      upper: [130, 255, 255]
+  
+  green:
+    - lower: [40, 50, 50]
+      upper: [80, 255, 255]
+
+# 检测参数
+detection_params:
+  min_area: 100          # 最小轮廓面积
+  circularity_threshold: 0.7  # 圆形度阈值
+  kernel_size: 5         # 形态学操作核大小
