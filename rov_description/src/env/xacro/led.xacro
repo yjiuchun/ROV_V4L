@@ -9,7 +9,7 @@
 <joint name="world_to_led_base" type="fixed">
     <parent link="world"/>
     <child link="led_base_link"/>
-    <origin xyz="1 0 0.5" rpy="0 ${-M_PI/2} 0"/>
+    <origin xyz="-1 0 0.5" rpy="0 ${-M_PI/2} 0"/>
 </joint>
 
 
@@ -31,15 +31,17 @@
 <gazebo reference="led_ld_link">
         <material>Gazebo/Blue</material>
 </gazebo>
-<xacro:mylink_cyl link_name="led_rd_link" l="0.01" r_="0.05" x="0" y="0" z="0" wx="${M_PI/2}" wy="${M_PI/2}" wz="0" color="bule" r="0" g="0" b="0" a="1" mass="0.1" ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+<!-- 右下LED (黄色) -->
+<xacro:mylink_cyl link_name="led_rd_link" l="0.01" r_="0.05" x="0" y="0" z="0" wx="${M_PI/2}" wy="${M_PI/2}" wz="0" color="yellow" r="255" g="255" b="0" a="1" mass="0.1" ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
 <gazebo reference="led_rd_link">
-        <material>Gazebo/Yellow</material>
+    <material>Gazebo/Yellow</material>
 </gazebo>
 
-<xacro:myjoint_fixed joint_name="led_ru_joint" joint_type="fixed" x="-0.15" y="0.15" z="0.005" wx="${M_PI/2}" wz="0" wy="0" parent_link="led_base_link" child_link="led_ru_link"/>
-<xacro:myjoint_fixed joint_name="led_rd_joint" joint_type="fixed" x="0.15" y="0.15" z="0.005" wx="${M_PI/2}" wz="0" wy="0" parent_link="led_base_link" child_link="led_rd_link"/>
-<xacro:myjoint_fixed joint_name="led_lu_joint" joint_type="fixed" x="-0.15" y="-0.15" z="0.005" wx="${M_PI/2}" wz="0" wy="0" parent_link="led_base_link" child_link="led_lu_link"/>
-<xacro:myjoint_fixed joint_name="led_ld_joint" joint_type="fixed" x="0.15" y="-0.15" z="0.005" wx="${M_PI/2}" wz="0" wy="0" parent_link="led_base_link" child_link="led_ld_link"/>
+<xacro:myjoint_fixed joint_name="led_ru_joint" joint_type="fixed" x="-0.15" y="0.15" z="-0.005" wx="${M_PI/2}" wz="0" wy="0" parent_link="led_base_link" child_link="led_ru_link"/>
+<xacro:myjoint_fixed joint_name="led_rd_joint" joint_type="fixed" x="0.15" y="0.15" z="-0.005" wx="${M_PI/2}" wz="0" wy="0" parent_link="led_base_link" child_link="led_rd_link"/>
+<xacro:myjoint_fixed joint_name="led_lu_joint" joint_type="fixed" x="-0.15" y="-0.15" z="-0.005" wx="${M_PI/2}" wz="0" wy="0" parent_link="led_base_link" child_link="led_lu_link"/>
+<xacro:myjoint_fixed joint_name="led_ld_joint" joint_type="fixed" x="0.15" y="-0.15" z="-0.005" wx="${M_PI/2}" wz="0" wy="0" parent_link="led_base_link" child_link="led_ld_link"/>
+
 
 
 </robot>

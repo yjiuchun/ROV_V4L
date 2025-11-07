@@ -7,18 +7,16 @@ import yaml
 import os
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-from pnp_solver import PnPSolver
-from pose_tf import PoseTF
+
 
 
 
 
 class Detector:
-    def __init__(self,config_name='detector.yaml',folder='/home/yjc/Project/rov_ws/src/vision_location/',show_image=False):
+    def __init__(self,config_name='colordetector.yaml',folder='/home/yjc/Project/rov_ws/src/vision4location/detection/config/',show_image=False):
         # 初始化默认参数
         self.color_ranges = {}
         self.min_area = 100
-        self.circularity_threshold = 0.7
         self.kernel_size = 5
         self.bridge = CvBridge()
         self.show_image = show_image
@@ -29,7 +27,8 @@ class Detector:
 
     def load_config(self,config_name,folder):
         """从配置文件加载参数"""
-        config_path = os.path.join(folder, 'config/',config_name)
+        config_path = os.path.join(folder,config_name)
+        print(config_path)
         
         try:
             with open(config_path, 'r') as file:
@@ -114,12 +113,10 @@ class Detector:
                         cx = int(M["m10"] / M["m00"])
                         cy = int(M["m01"] / M["m00"])
                         
-                        # 检查是否为圆形
-                        # if self.is_circular(largest_contour):
                         feature_points.append([cx, cy])
-                            # rospy.loginfo(f"检测到{color}圆中心: ({cx}, {cy})")
-                            
-                            # 在图像上标记检测到的点
+                        # rospy.loginfo(f"检测到{color}圆中心: ({cx}, {cy})")
+                        
+                        # 在图像上标记检测到的点
                         cv2.circle(image, (cx, cy), 5, (0, 255, 0), -1)
                         cv2.putText(image, color, (cx+10, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
         if self.show_image:
@@ -128,35 +125,14 @@ class Detector:
             cv2.waitKey(1)
         return np.array(feature_points, dtype=np.float32), image
 
-    def is_circular(self, contour):
-        """检查轮廓是否为圆形"""
-        # 计算轮廓面积
-        area = cv2.contourArea(contour)
-        
-        # 计算轮廓周长
-        perimeter = cv2.arcLength(contour, True)
-        
-        if perimeter == 0:
-            return False
-        
-        # 计算圆形度 (4π*面积/周长²)
-        circularity = 4 * np.pi * area / (perimeter * perimeter)
-        
-        # 圆形度接近1表示更接近圆形
-        return 1
 
 
 if __name__ == '__main__':
     rospy.init_node('detector_test_node', anonymous=True)
     
     # 创建检测器实例
-    detector = Detector()
-    # 创建PnP求解器实例
-    pnp_solver = PnPSolver()
-    # 创建位姿转换实例
-    pose_tf = PoseTF()
-    
-    # 创建CV桥接器
+    detector = Detector(show_image=True)
+
     detector_bridge = CvBridge()
 
     def image_callback(data):
@@ -167,14 +143,6 @@ if __name__ == '__main__':
             
             # 提取特征点
             feature_points = detector.extract_feature_points(cv_image)
-            # 使用PnP求解器求解位姿
-            rvec, tvec = pnp_solver.solve_pnp(feature_points)
-            # 使用位姿转换实例转换位姿
-            pose = pose_tf.pose_process(rvec, tvec)
-            # if pose is not None:
-            #     rospy.loginfo(f"PnP求解成功: 位置=({pose.pose.position.x:.3f}, {pose.pose.position.y:.3f}, {pose.pose.position.z:.3f})")
-            # else:
-            #     rospy.logwarn("PnP求解失败")
                     
         except Exception as e:
             rospy.logerr(f"处理图像时出错: {e}")
