@@ -20,6 +20,10 @@ if vision_location_scripts not in sys.path:
 # 导入vision_location的Detector类
 from detector import Detector
 
+# 导入双目三角测量模块
+sys.path.insert(0, current_dir)
+from stereo_triangulation import StereoTriangulation
+
 
 class DualCameraDetector:
     def __init__(self):
@@ -28,6 +32,20 @@ class DualCameraDetector:
         self.window_name = "ZED2 Dual Camera View"
         self.left_detector = Detector(config_name='left_detector.yaml',folder=os.path.dirname(current_dir))
         self.right_detector = Detector(config_name='right_detector.yaml',folder=os.path.dirname(current_dir))
+        self.left_feature_points = []
+        self.right_feature_points = []
+        self.save_image = True
+        
+        # 初始化双目三角测量器
+        try:
+            self.stereo_triangulator = StereoTriangulation()
+            self.world_points = self.load_world_points()
+        except Exception as e:
+            print(f"警告: 无法初始化双目三角测量器: {e}")
+            self.stereo_triangulator = None
+            self.world_points = None
+
+
 
         # 帧率计算变量
         self.prev_time = time.time()
@@ -90,6 +108,11 @@ class DualCameraDetector:
             
             # 显示图像
             cv2.imshow(self.window_name, dual_view)
+            if self.save_image:
+                cv2.imwrite('./left_image.jpg', left_labeled)
+                cv2.imwrite('./right_image.jpg', right_labeled)
+                # self.save_image = False
+            
             cv2.waitKey(1)
             
         except cv2.error as e:
@@ -98,6 +121,103 @@ class DualCameraDetector:
             print("显示图像时出错: {}".format(e))
             import traceback
             traceback.print_exc()
+    
+    def load_world_points(self):
+        """
+        从配置文件加载世界坐标系中的3D点
+        
+        Returns:
+            world_points: 世界坐标系中的3D点，形状 (N, 3) 或 None
+        """
+        try:
+            config_dir = os.path.dirname(os.path.dirname(__file__))
+            config_path = os.path.join(config_dir, 'config', 'stereo_calibration.yaml')
+            
+            import yaml
+            with open(config_path, 'r') as file:
+                config = yaml.safe_load(file)
+            
+            if 'world_points' in config and config['world_points']:
+                world_points = np.array(config['world_points'], dtype=np.float32)
+                print(f"已加载 {len(world_points)} 个世界坐标点")
+                return world_points
+            else:
+                print("配置文件中未找到世界坐标点，将只进行三角测量")
+                return None
+        except Exception as e:
+            print(f"加载世界坐标点失败: {e}")
+            return None
+    
+    def perform_triangulation(self, left_points, right_points):
+        """
+        对左右图像的关键点进行三角测量
+        
+        Args:
+            left_points: 左图像像素坐标，列表格式 [[x1, y1], [x2, y2], ...]
+            right_points: 右图像像素坐标，列表格式 [[x1, y1], [x2, y2], ...]
+        
+        Returns:
+            points_3d: 3D坐标，形状 (N, 3)，或 None
+        """
+        if self.stereo_triangulator is None:
+            print("双目三角测量器未初始化")
+            return None
+        
+        if len(left_points) != len(right_points):
+            print(f"左右图像点数不匹配: 左{len(left_points)}, 右{len(right_points)}")
+            return None
+        
+        if len(left_points) < 4:
+            print(f"点数不足，需要至少4个点，当前有{len(left_points)}个")
+            return None
+        
+        # 转换为numpy数组
+        left_pts = np.array(left_points, dtype=np.float32)
+        right_pts = np.array(right_points, dtype=np.float32)
+        
+        # 执行三角测量
+        points_3d = self.stereo_triangulator.triangulate_points(left_pts, right_pts)
+        # print(points_3d[0], points_3d[1])
+        
+        return points_3d
+    
+    def perform_localization(self, left_points, right_points):
+        """
+        完整的双目定位流程：三角测量 + PnP求解（如果提供了世界坐标点）
+        
+        Args:
+            left_points: 左图像像素坐标
+            right_points: 右图像像素坐标
+        
+        Returns:
+            points_3d: 3D坐标（相机坐标系）
+            rvec: 旋转向量（如果进行了PnP求解）
+            tvec: 平移向量（如果进行了PnP求解）
+        """
+        # 步骤1: 三角测量
+        points_3d = self.perform_triangulation(left_points, right_points)
+        
+        if points_3d is None:
+            return None, None, None
+        
+        # 步骤2: 如果有世界坐标点，进行PnP求解
+        rvec, tvec = None, None
+        if self.world_points is not None and len(self.world_points) >= 4 and 0:
+            if len(points_3d) >= 4:
+                success, _, rvec, tvec = self.stereo_triangulator.solve_pnp_from_image_points(
+                    np.array(left_points, dtype=np.float32),
+                    np.array(right_points, dtype=np.float32),
+                    self.world_points[:len(points_3d)]  # 只使用匹配的点数
+                )
+                
+                if success and rvec is not None:
+                    print("PnP求解成功")
+                else:
+                    print("PnP求解失败")
+            else:
+                print(f"3D点数({len(points_3d)})不足，无法进行PnP求解")
+        
+        return points_3d, rvec, tvec
     
     def extract_feature_points(self, image):
         """
@@ -123,6 +243,8 @@ if __name__ == '__main__':
     import rospy
     from sensor_msgs.msg import Image
     from cv_bridge import CvBridge
+    from geometry_msgs.msg import PoseStamped, PointStamped
+    import cv2
     
     # 初始化ROS节点
     rospy.init_node('dual_camera_detector', anonymous=True)
@@ -148,6 +270,10 @@ if __name__ == '__main__':
     
     # 创建检测器实例
     detector = DualCameraDetector()
+    
+    # 创建位姿发布器
+    pose_pub = rospy.Publisher('/stereo_vision/pose', PoseStamped, queue_size=1)
+    points_3d_pub = rospy.Publisher('/stereo_vision/points_3d', PointStamped, queue_size=1)
     
     def left_image_callback(msg):
         """左相机图像回调函数"""
@@ -216,8 +342,89 @@ if __name__ == '__main__':
         while not rospy.is_shutdown():
             # 当左右图像都准备好时，传递给detector显示
             if image_data['left'] is not None and image_data['right'] is not None:
-                image_data['left'] = detector.left_detector.extract_feature_points(image_data['left'])
-                image_data['right'] = detector.right_detector.extract_feature_points(image_data['right'])
+                # time.sleep(0.1)
+                detector.right_feature_points, image_data['right'] = detector.right_detector.extract_feature_points(image_data['right'])
+                detector.left_feature_points, image_data['left'] = detector.left_detector.extract_feature_points(image_data['left'])
+                # print(detector.left_feature_points)
+                # print(detector.right_feature_points)
+                # print(detector.left_feature_points[0][0]-detector.right_feature_points[0][0])
+                # 如果检测到足够的特征点，进行三角测量和定位
+                if len(detector.left_feature_points) >= 4 and len(detector.right_feature_points) >= 4:
+                    # 确保左右图像的点一一对应
+                    min_points = min(len(detector.left_feature_points), len(detector.right_feature_points))
+                    left_pts = detector.left_feature_points[:min_points]
+                    right_pts = detector.right_feature_points[:min_points]
+                    
+                    # 执行定位
+                    points_3d, rvec, tvec = detector.perform_localization(left_pts, right_pts)
+                    print(points_3d)
+                    
+                    if points_3d is not None:
+                        # 打印3D坐标信息
+                        rospy.loginfo_throttle(1.0, f"三角测量成功，获得 {len(points_3d)} 个3D点")
+                        for i, pt in enumerate(points_3d):
+                            rospy.loginfo_throttle(1.0, f"点{i+1}: ({pt[0]:.3f}, {pt[1]:.3f}, {pt[2]:.3f}) 米")
+                        
+                        # 发布3D点（以第一个点为例，或可以发布所有点）
+                        if len(points_3d) > 0:
+                            point_msg = PointStamped()
+                            point_msg.header.frame_id = "zed2_left_camera_optical_frame"
+                            point_msg.header.stamp = rospy.Time.now()
+                            point_msg.point.x = float(points_3d[0][0])
+                            point_msg.point.y = float(points_3d[0][1])
+                            point_msg.point.z = float(points_3d[0][2])
+                            points_3d_pub.publish(point_msg)
+                        
+                        # 如果进行了PnP求解，发布位姿信息
+                        if rvec is not None and tvec is not None:
+                            # 将旋转向量转换为旋转矩阵
+                            R, _ = cv2.Rodrigues(rvec)
+                            
+                            # 创建位姿消息
+                            pose_msg = PoseStamped()
+                            pose_msg.header.frame_id = "zed2_left_camera_optical_frame"
+                            pose_msg.header.stamp = rospy.Time.now()
+                            
+                            # 设置位置（tvec是从世界坐标系到相机坐标系的平移）
+                            pose_msg.pose.position.x = float(tvec[0][0])
+                            pose_msg.pose.position.y = float(tvec[1][0])
+                            pose_msg.pose.position.z = float(tvec[2][0])
+                            
+                            # 将旋转矩阵转换为四元数
+                            trace = np.trace(R)
+                            if trace > 0:
+                                s = np.sqrt(trace + 1.0) * 2
+                                w = 0.25 * s
+                                x = (R[2, 1] - R[1, 2]) / s
+                                y = (R[0, 2] - R[2, 0]) / s
+                                z = (R[1, 0] - R[0, 1]) / s
+                            elif (R[0, 0] > R[1, 1]) and (R[0, 0] > R[2, 2]):
+                                s = np.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2]) * 2
+                                w = (R[2, 1] - R[1, 2]) / s
+                                x = 0.25 * s
+                                y = (R[0, 1] + R[1, 0]) / s
+                                z = (R[0, 2] + R[2, 0]) / s
+                            elif R[1, 1] > R[2, 2]:
+                                s = np.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2]) * 2
+                                w = (R[0, 2] - R[2, 0]) / s
+                                x = (R[0, 1] + R[1, 0]) / s
+                                y = 0.25 * s
+                                z = (R[1, 2] + R[2, 1]) / s
+                            else:
+                                s = np.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1]) * 2
+                                w = (R[1, 0] - R[0, 1]) / s
+                                x = (R[0, 2] + R[2, 0]) / s
+                                y = (R[1, 2] + R[2, 1]) / s
+                                z = 0.25 * s
+                            
+                            pose_msg.pose.orientation.w = float(w)
+                            pose_msg.pose.orientation.x = float(x)
+                            pose_msg.pose.orientation.y = float(y)
+                            pose_msg.pose.orientation.z = float(z)
+                            
+                            pose_pub.publish(pose_msg)
+                            rospy.loginfo_throttle(1.0, f"位姿估计成功: tvec=({tvec[0][0]:.3f}, {tvec[1][0]:.3f}, {tvec[2][0]:.3f})")
+                
                 detector.display_images(image_data['left'], image_data['right'])
                 
 

@@ -78,6 +78,7 @@ class Detector:
         """提取红黄蓝绿四个圆的中点作为特征点"""
         # 转换为HSV颜色空间
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        # image_copy = image.copy()
 
         feature_points = []
         colors = ['yellow', 'blue', 'green', 'red']
@@ -121,12 +122,11 @@ class Detector:
                             # 在图像上标记检测到的点
                             cv2.circle(image, (cx, cy), 5, (0, 255, 0), -1)
                             cv2.putText(image, color, (cx+10, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-        return image
         if self.show_image:
             # 显示处理后的图像
             cv2.imshow("PnP Feature Detection", image)
             cv2.waitKey(1)
-            return np.array(feature_points, dtype=np.float32)
+        return np.array(feature_points, dtype=np.float32), image
 
     def is_circular(self, contour):
         """检查轮廓是否为圆形"""
