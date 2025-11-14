@@ -2,6 +2,11 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="wheel">
 <xacro:include filename="$(find rov_description)/src/env/xacro/fun_define.xacro"/>
 
+<!-- LED基座Z轴坐标变量 -->
+<xacro:property name="led_base_z" value="0.5"/>
+
+<!-- 光源相对于LED基座的Z轴偏移 -->
+<xacro:property name="led_height" value="0.15"/>  <!-- 高位置光源偏移 -->
 <!-- 添加世界坐标系链接 -->
 <link name="world"/>
 
@@ -9,7 +14,7 @@
 <joint name="world_to_led_base" type="fixed">
     <parent link="world"/>
     <child link="led_base_link"/>
-    <origin xyz="-1 0 0.5" rpy="0 ${-M_PI/2} 0"/>
+    <origin xyz="-1 0 ${led_base_z}" rpy="0 ${-M_PI/2} 0"/>
 </joint>
 
 
@@ -18,21 +23,33 @@
         <material>Gazebo/Black</material>
 </gazebo>
 
+<xacro:mylink_tri myname="led_background_link" l="20" w="20" h="0.1" x="0" y="0" z="0" wx="0" wy="0" wz="0" color="black" r="0" g="0" b="0" a="1" mass="0.1" ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+<gazebo reference="led_background_link">
+        <material>Gazebo/Black</material>
+</gazebo>
 
-<xacro:mylink_cyl link_name="led_lu_link" l="0.01" r_="0.05" x="0" y="0" z="0" wx="${M_PI/2}" wy="${M_PI/2}" wz="0" color="bule" r="0" g="0" b="0" a="1" mass="0.1" ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+<!-- 添加固定关节将机器人固定到世界坐标系 -->
+<joint name="world_to_led_background" type="fixed">
+    <parent link="world"/>
+    <child link="led_background_link"/>
+    <origin xyz="-1.2 0 10" rpy="0 ${-M_PI/2} 0"/>
+</joint>
+
+
+<xacro:mylink_cyl link_name="led_lu_link" l="0.01" r_="0.1" x="0" y="0" z="0" wx="${M_PI/2}" wy="${M_PI/2}" wz="0" color="bule" r="0" g="0" b="0" a="1" mass="0.1" ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
 <gazebo reference="led_lu_link">
         <material>Gazebo/Green</material>
 </gazebo>
-<xacro:mylink_cyl link_name="led_ru_link" l="0.01" r_="0.05" x="0" y="0" z="0" wx="${M_PI/2}" wy="${M_PI/2}" wz="0" color="bule" r="0" g="0" b="0" a="1" mass="0.1" ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+<xacro:mylink_cyl link_name="led_ru_link" l="0.01" r_="0.1" x="0" y="0" z="0" wx="${M_PI/2}" wy="${M_PI/2}" wz="0" color="bule" r="0" g="0" b="0" a="1" mass="0.1" ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
 <gazebo reference="led_ru_link">
         <material>Gazebo/Red</material>
 </gazebo>
-<xacro:mylink_cyl link_name="led_ld_link" l="0.01" r_="0.05" x="0" y="0" z="0" wx="${M_PI/2}" wy="${M_PI/2}" wz="0" color="bule" r="0" g="0" b="0" a="1" mass="0.1" ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+<xacro:mylink_cyl link_name="led_ld_link" l="0.01" r_="0.1" x="0" y="0" z="0" wx="${M_PI/2}" wy="${M_PI/2}" wz="0" color="bule" r="0" g="0" b="0" a="1" mass="0.1" ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
 <gazebo reference="led_ld_link">
         <material>Gazebo/Blue</material>
 </gazebo>
 <!-- 右下LED (黄色) -->
-<xacro:mylink_cyl link_name="led_rd_link" l="0.01" r_="0.05" x="0" y="0" z="0" wx="${M_PI/2}" wy="${M_PI/2}" wz="0" color="yellow" r="255" g="255" b="0" a="1" mass="0.1" ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+<xacro:mylink_cyl link_name="led_rd_link" l="0.01" r_="0.1" x="0" y="0" z="0" wx="${M_PI/2}" wy="${M_PI/2}" wz="0" color="yellow" r="255" g="255" b="0" a="1" mass="0.1" ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
 <gazebo reference="led_rd_link">
     <material>Gazebo/Yellow</material>
 </gazebo>
@@ -42,6 +59,140 @@
 <xacro:myjoint_fixed joint_name="led_lu_joint" joint_type="fixed" x="-0.15" y="-0.15" z="-0.005" wx="${M_PI/2}" wz="0" wy="0" parent_link="led_base_link" child_link="led_lu_link"/>
 <xacro:myjoint_fixed joint_name="led_ld_joint" joint_type="fixed" x="0.15" y="-0.15" z="-0.005" wx="${M_PI/2}" wz="0" wy="0" parent_link="led_base_link" child_link="led_ld_link"/>
 
+<!-- ============================================ -->
+<!-- 四个Spot光源，分别照射四个LED标识 -->
+<!-- ============================================ -->
 
+<!-- 光源1：照射黄色LED (led_rd_link, 右下) -->
+<link name="spot_light_1_link">
+    <inertial>
+        <mass value="0.001"/>
+        <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
+    </inertial>
+</link>
+<joint name="world_to_spot_light_1" type="fixed">
+    <parent link="world"/>
+    <child link="spot_light_1_link"/>
+    <origin xyz="-0.7 -0.15 ${led_base_z + led_height}" rpy="0 1.5708 0"/>
+</joint>
+<gazebo reference="spot_light_1_link">
+    <light type="spot" name="spot_light_1">
+        <pose>0 0 0 0 0 0</pose>
+        <diffuse>1 1 1 1</diffuse>
+        <specular>1 1 1 1</specular>
+        <attenuation>
+            <range>1.0</range>
+            <constant>0.5</constant>
+            <linear>0.01</linear>
+            <quadratic>0.01</quadratic>
+        </attenuation>
+        <cast_shadows>true</cast_shadows>
+        <direction>0 0 -1</direction>
+        <spot>
+            <inner_angle>0.3</inner_angle>
+            <outer_angle>0.6</outer_angle>
+            <falloff>1.0</falloff>
+        </spot>
+    </light>
+</gazebo>
+
+<!-- 光源2：照射红色LED (led_ru_link, 右上) -->
+<link name="spot_light_2_link">
+    <inertial>
+        <mass value="0.001"/>
+        <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
+    </inertial>
+</link>
+<joint name="world_to_spot_light_2" type="fixed">
+    <parent link="world"/>
+    <child link="spot_light_2_link"/>
+    <origin xyz="-0.7 0.15 ${led_base_z + led_height}" rpy="0 1.5708 0"/>
+</joint>
+<gazebo reference="spot_light_2_link">
+    <light type="spot" name="spot_light_2">
+        <pose>0 0 0 0 0 0</pose>
+        <diffuse>1 1 1 1</diffuse>
+        <specular>1 1 1 1</specular>
+        <attenuation>
+            <range>1.0</range>
+            <constant>0.5</constant>
+            <linear>0.01</linear>
+            <quadratic>0.01</quadratic>
+        </attenuation>
+        <cast_shadows>true</cast_shadows>
+        <direction>0 0 -1</direction>
+        <spot>
+            <inner_angle>0.3</inner_angle>
+            <outer_angle>0.6</outer_angle>
+            <falloff>1.0</falloff>
+        </spot>
+    </light>
+</gazebo>
+
+<!-- 光源3：照射绿色LED (led_lu_link, 左上) -->
+<link name="spot_light_3_link">
+    <inertial>
+        <mass value="0.001"/>
+        <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
+    </inertial>
+</link>
+<joint name="world_to_spot_light_3" type="fixed">
+    <parent link="world"/>
+    <child link="spot_light_3_link"/>
+    <origin xyz="-0.7 0.15 ${led_base_z - led_height}" rpy="0 1.5708 0"/>
+</joint>
+<gazebo reference="spot_light_3_link">
+    <light type="spot" name="spot_light_3">
+        <pose>0 0 0 0 0 0</pose>
+        <diffuse>1 1 1 1</diffuse>
+        <specular>1 1 1 1</specular>
+        <attenuation>
+            <range>1.0</range>
+            <constant>0.5</constant>
+            <linear>0.01</linear>
+            <quadratic>0.01</quadratic>
+        </attenuation>
+        <cast_shadows>true</cast_shadows>
+        <direction>0 0 -1</direction>
+        <spot>
+            <inner_angle>0.3</inner_angle>
+            <outer_angle>0.6</outer_angle>
+            <falloff>1.0</falloff>
+        </spot>
+    </light>
+</gazebo>
+
+<!-- 光源4：照射蓝色LED (led_ld_link, 左下) -->
+<link name="spot_light_4_link">
+    <inertial>
+        <mass value="0.001"/>
+        <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
+    </inertial>
+</link>
+<joint name="world_to_spot_light_4" type="fixed">
+    <parent link="world"/>
+    <child link="spot_light_4_link"/>
+    <origin xyz="-0.7 -0.15 ${led_base_z - led_height}" rpy="0 1.5708 0"/>
+</joint>
+<gazebo reference="spot_light_4_link">
+    <light type="spot" name="spot_light_4">
+        <pose>0 0 0 0 0 0</pose>
+        <diffuse>1 1 1 1</diffuse>
+        <specular>1 1 1 1</specular>
+        <attenuation>
+            <range>1.0</range>
+            <constant>0.5</constant>
+            <linear>0.01</linear>
+            <quadratic>0.01</quadratic>
+        </attenuation>
+        <cast_shadows>true</cast_shadows>
+        <direction>0 0 -1</direction>
+        <spot>
+            <inner_angle>0.3</inner_angle>
+            <outer_angle>0.6</outer_angle>
+            <falloff>1.0</falloff>
+        </spot>
+    </light>
+</gazebo>
 
 </robot>

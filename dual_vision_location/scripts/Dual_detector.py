@@ -357,7 +357,7 @@ if __name__ == '__main__':
                     
                     # 执行定位
                     points_3d, rvec, tvec = detector.perform_localization(left_pts, right_pts)
-                    print(points_3d)
+                    print(points_3d[0])
                     
                     if points_3d is not None:
                         # 打印3D坐标信息

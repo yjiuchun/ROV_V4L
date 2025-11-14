@@ -140,6 +140,7 @@ if __name__ == '__main__':
         try:
             # 将ROS图像消息转换为OpenCV格式
             cv_image = detector_bridge.imgmsg_to_cv2(data, "bgr8")
+            # cv2.imwrite('./left_image.jpg', cv_image)
             
             # 提取特征点
             feature_points = detector.extract_feature_points(cv_image)
@@ -148,7 +149,7 @@ if __name__ == '__main__':
             rospy.logerr(f"处理图像时出错: {e}")
     
     # 订阅图像话题
-    rospy.Subscriber('/camera/image_raw', Image, image_callback)
+    rospy.Subscriber('/zed2/left_raw/image_raw_color', Image, image_callback)
     
     rospy.loginfo("检测器节点已启动")
     rospy.spin()
