@@ -20,7 +20,7 @@ class Detector:
         self.kernel_size = 5
         self.bridge = CvBridge()
         self.show_image = show_image
-        
+        self.box=np.eye(4,4) # 4x4的单位矩阵
         # 加载配置
         self.load_config(config_name,folder)
 
@@ -82,7 +82,8 @@ class Detector:
         feature_points = []
         colors = ['yellow', 'blue', 'green', 'red']
         
-        for color in colors:
+        for i in range(len(colors)):
+            color = colors[i]
             # 创建颜色掩码
             mask = np.zeros(hsv.shape[:2], dtype=np.uint8)
             
@@ -109,6 +110,11 @@ class Detector:
                 if area > self.min_area:
                     # 计算轮廓的几何中心
                     M = cv2.moments(largest_contour)
+                    rot_rect = cv2.minAreaRect(largest_contour)   # 返回 (center, (w,h), angle)
+                    box_pts = cv2.boxPoints(rot_rect)             # 4×2 浮点坐标
+                    box_pts = np.int0(box_pts)                    # 如需绘制转成整数
+                    (self.box[i][0], self.box[i][1]),(self.box[i][2],self.box[i][3]),_ = rot_rect                    # self.box = np.concatenate((self.box, box_pts), axis=0)
+                    # print(rot_rect)
                     if M["m00"] != 0:
                         cx = int(M["m10"] / M["m00"])
                         cy = int(M["m01"] / M["m00"])
@@ -118,12 +124,13 @@ class Detector:
                         
                         # 在图像上标记检测到的点
                         cv2.circle(image, (cx, cy), 5, (0, 255, 0), -1)
+                        cv2.drawContours(image, [box_pts], contourIdx=-1, color=(0, 255, 0), thickness=2)
                         cv2.putText(image, color, (cx+10, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
         if self.show_image:
             # 显示处理后的图像
             cv2.imshow("PnP Feature Detection", image)
             cv2.waitKey(1)
-        return np.array(feature_points, dtype=np.float32), image
+        return np.array(feature_points, dtype=np.float32), image,self.box
 
 
 
@@ -143,7 +150,8 @@ if __name__ == '__main__':
             # cv2.imwrite('./left_image.jpg', cv_image)
             
             # 提取特征点
-            feature_points = detector.extract_feature_points(cv_image)
+            feature_points,_,box = detector.extract_feature_points(cv_image)
+            # print(box)
                     
         except Exception as e:
             rospy.logerr(f"处理图像时出错: {e}")
