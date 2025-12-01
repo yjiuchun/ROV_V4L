@@ -65,20 +65,17 @@
 作者:Yangjiuchun
 时间:2025-11-21
 """
-import rospy
 import cv2
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
+
 import numpy as np
 import sys
 import os
 vision4location_detection_dir = '/home/yjc/Project/rov_ws/src/vision4location/detection'
 if vision4location_detection_dir not in sys.path:
     sys.path.insert(0, vision4location_detection_dir)
-from ColorDetector import Detector
 
 class BoudingBox_kf:
-    def __init__(self, dt=1.0):
+    def __init__(self, dt=0.3):
         """
         初始化边界框卡尔曼滤波器
         
@@ -97,7 +94,7 @@ class BoudingBox_kf:
         self.Q = np.diag([0.01, 0.01, 0.01, 0.01, 0.1, 0.1, 0.1, 0.1])
         
         # 观测噪声协方差矩阵 R (4x4) - 对角矩阵
-        self.R = np.diag([0.1, 0.1, 0.1, 0.1])
+        self.R = np.diag([0.1, 0.1, 0.1, 0.1]) * 1
         
         # 观测矩阵 H (4x8): Z = H * X
         # H矩阵从8维状态向量中提取4维观测值 [cx, cy, w, h]
@@ -128,10 +125,85 @@ class BoudingBox_kf:
         self.x = self.x_pred + self.K @ (z - self.H @ self.x_pred)
         self.P = (np.eye(8) - self.K @ self.H) @ self.P_pred
     
+    def get_bbox(self):
+        """
+        获取当前边界框参数
+        
+        返回:
+            cx, cy, w, h: 中心点坐标和宽高
+        """
+        cx = self.x[0]
+        cy = self.x[1]
+        w = self.x[2]
+        h = self.x[3]
+        return cx, cy, w, h
+    
+    def get_bbox_int(self):
+        """
+        获取当前边界框参数（整数格式，用于绘制和裁剪）
+        
+        返回:
+            x1, y1, x2, y2: 左上角和右下角坐标
+        """
+        cx, cy, w, h = self.get_bbox()
+        x1 = int(cx - w / 2)
+        y1 = int(cy - h / 2)
+        x2 = int(cx + w / 2)
+        y2 = int(cy + h / 2)
+        return x1, y1, x2, y2
+    
+    def crop_image(self, image):
+        """
+        根据卡尔曼滤波得到的矩形框裁剪图片
+        
+        参数:
+            image: 输入图像 (numpy array)
+        
+        返回:
+            cropped_image: 裁剪后的图像，如果边界框无效则返回None
+        """
+        x1, y1, x2, y2 = self.get_bbox_int()
+        
+        # 获取图像尺寸
+        img_h, img_w = image.shape[:2]
+        
+        # 边界检查，确保裁剪区域在图像范围内
+        x1 = max(0, min(x1, img_w))
+        y1 = max(0, min(y1, img_h))
+        x2 = max(0, min(x2, img_w))
+        y2 = max(0, min(y2, img_h))
+        
+        # 检查有效性
+        if x2 <= x1 or y2 <= y1:
+            return None
+        
+        # 裁剪图像
+        cropped_image = image[y1:y2, x1:x2]
+        return cropped_image
+    
+    def draw_bbox(self, image, color=(0, 255, 0), thickness=2):
+        """
+        在图像上绘制卡尔曼滤波得到的边界框
+        
+        参数:
+            image: 输入图像
+            color: 边界框颜色 (BGR格式)
+            thickness: 线条粗细
+        
+        返回:
+            image: 绘制了边界框的图像
+        """
+        x1, y1, x2, y2 = self.get_bbox_int()
+        cv2.rectangle(image, (x1, y1), (x2, y2), color, thickness)
+        return image
+    
 
 if __name__ == '__main__':
 
-
+    import rospy
+    from sensor_msgs.msg import Image
+    from cv_bridge import CvBridge
+    from ColorDetector import Detector
 
 
     rospy.init_node('bouding_box_kf_test_node', anonymous=True)
@@ -164,7 +236,7 @@ if __name__ == '__main__':
             # print(cx,cy,w,h,vx,vy,vw,vh)
             cv2.rectangle(image, (int(cx-w/2), int(cy-h/2)), (int(cx+w/2), int(cy+h/2)), (255, 0, 0), 2)
             cv2.imshow("Bouding Box", image)
-            cv2.waitKey(1)
+            cv2.waitKey(1000)
 
                     
         except Exception as e:
