@@ -7,7 +7,7 @@ import os
 
 class SelfLightness:
     def __init__(self, config_name='self_lightness.yaml', folder='/home/yjc/Project/rov_ws/src/vision4location/detection/config/',show_image=False):
-        self.min_area = 10
+        self.min_area = 1
         self.kernel_size = 0
         self.show_image = show_image
         self.box=np.eye(4,4) # 4x4的单位矩阵
@@ -95,6 +95,7 @@ class SelfLightness:
         # print(self.threshold)
         # 阈值分割
         _, binary_img = cv2.threshold(gray_img, self.threshold, 255, cv2.THRESH_BINARY)
+        cv2.imwrite('/home/yjc/Project/binary_img.jpg', binary_img)
 
         # 形态学操作，去除噪声
         if self.kernel_size > 0:
@@ -176,17 +177,17 @@ class SelfLightness:
             for i, circle in enumerate(sorted_circles):
                 center_points.append(circle['center'])
                 order = "第1个(面积最大)" if i == 0 else f"第{i+1}个(顺时针)"
-                print(f"{order} - 圆形中心点: {circle['center']}, 半径: {circle['radius']}, 面积: {circle['area']:.2f}, 圆度: {circle['circularity']:.3f}")
+                # print(f"{order} - 圆形中心点: {circle['center']}, 半径: {circle['radius']}, 面积: {circle['area']:.2f}, 圆度: {circle['circularity']:.3f}")
         else:
             print(f"警告: 只检测到 {len(sorted_circles)} 个圆形，期望4个")
             for i, circle in enumerate(sorted_circles):
                 center_points.append(circle['center'])
                 order = "第1个(面积最大)" if i == 0 else f"第{i+1}个(顺时针)"
-                print(f"{order} - 圆形中心点: {circle['center']}, 半径: {circle['radius']}, 面积: {circle['area']:.2f}, 圆度: {circle['circularity']:.3f}")
+                # print(f"{order} - 圆形中心点: {circle['center']}, 半径: {circle['radius']}, 面积: {circle['area']:.2f}, 圆度: {circle['circularity']:.3f}")
         
         # 转换为numpy数组格式（与其他detector保持一致）
         feature_points = np.array(center_points, dtype=np.float32) if len(center_points) > 0 else np.array([], dtype=np.float32).reshape(0, 2)
-        
+        centers = []
         # 可视化（可选）
         if self.show_image:
             result_img = image.copy()
@@ -211,13 +212,15 @@ class SelfLightness:
                 cv2.putText(result_img, label, 
                            (center[0] + 10, center[1]), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
-            cv2.imshow("Detected Circles", result_img)
-            cv2.waitKey(10)
+                centers.append(center)
+            # cv2.imwrite('/home/yjc/Project/result_img.jpg', result_img)
+            # cv2.imshow("Detected Circles", result_img)
+            # cv2.waitKey(10)
 
         # cv2.imwrite("./binary_img.jpg", binary_img)
         # cv2.waitKey(0)
         
-        return feature_points, binary_img
+        return feature_points, binary_img,centers
 
 
 if __name__ == '__main__':

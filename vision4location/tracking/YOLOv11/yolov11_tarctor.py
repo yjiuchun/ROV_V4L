@@ -175,7 +175,7 @@ class YOLOv11Detector:
                 self.box = np.array([cx, cy, w, h])
                 detection_results.append(detection_result)
         
-        return detection_results,self.box
+        return detection_results,self.box,x1
     
     def detect_batch(self, images: List[Union[np.ndarray, str, Path]],
                     conf: Optional[float] = None,
@@ -404,6 +404,11 @@ if __name__ == '__main__':
     if self_lightness_dir not in sys.path:
         sys.path.insert(0, self_lightness_dir)
     from self_lightness import SelfLightness
+
+    pnp_dir = '/home/yjc/Project/rov_ws/src/vision4location/location'
+    if pnp_dir not in sys.path:
+        sys.path.insert(0, pnp_dir)
+    from pnp_solver import PnPSolver
     parser = argparse.ArgumentParser(description='YOLOv11目标检测示例')
     parser.add_argument('--model', type=str, default='/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11/firsttrain_withledring/firsttrainledring/weights/best.pt',
                        help='模型文件路径')
@@ -427,48 +432,90 @@ if __name__ == '__main__':
         iou_threshold=args.iou
     )
     bouding_box_kf = BoudingBox_kf()
+    pnp_solver = PnPSolver()
     # video_path = "/home/yjc/stereo_videos/960540/1L.mp4"
-    video_path = "/home/yjc/stereo_videos/960540/2L.mp4"
-    cap = cv2.VideoCapture(video_path)
+    video_path_left = "/home/yjc/stereo_videos/640360/3L.mp4"
+    video_path_right = "/home/yjc/stereo_videos/640360/3R.mp4"
+    cap_left = cv2.VideoCapture(video_path_left)
+    cap_right = cv2.VideoCapture(video_path_right)
     self_lightness = SelfLightness(show_image=True)
 
     # 检查视频是否成功打开
-    if not cap.isOpened():
+    if not cap_left.isOpened() or not cap_right.isOpened():
         print("错误：无法打开视频文件！")
         exit()
-    while cap.isOpened():
+    while cap_left.isOpened() and cap_right.isOpened():
         # 读取单帧（ret=True表示读取成功，frame为帧数据（BGR格式））
-        ret, frame = cap.read()
+        ret, frame_left = cap_left.read()
+        ret, frame_right = cap_right.read()
         
         if not ret:  # 读取完毕（或出错），退出循环
             print("视频读取完毕/出错")
             break
-        
-        results,box = detector.detect(frame)
-        bouding_box_kf.update(box)
-        bouding_box_kf.predict()
-        cx = bouding_box_kf.x[0]
-        cy = bouding_box_kf.x[1]
-        w = bouding_box_kf.x[2]
-        h = bouding_box_kf.x[3]
-        vx = bouding_box_kf.x[4]
-        vy = bouding_box_kf.x[5]
-        vw = bouding_box_kf.x[6]
-        vh = bouding_box_kf.x[7]
+            
+        results_l,box_left,x_offset = detector.detect(frame_left)
+        results_r,box_right,x_offset = detector.detect(frame_right)
+        # print(box)
+        # # print('===============================================')
+        # bouding_box_kf.update(box_left)
+        # bouding_box_kf.predict()
+        # cx = bouding_box_kf.x[0]
+        # cy = bouding_box_kf.x[1]
+        # w = bouding_box_kf.x[2]
+        # h = bouding_box_kf.x[3]
+        # vx = bouding_box_kf.x[4]
+        # vy = bouding_box_kf.x[5]
+        # vw = bouding_box_kf.x[6]
+        # vh = bouding_box_kf.x[7]
 
-        x1 = int(cx-w/2)
-        y1 = int(cy-h/2)
-        x2 = int(cx+w/2)
-        y2 = int(cy+h/2)
+        x1_l = int(box_left[0] - box_left[2]/2)
+        y1_l = int(box_left[1] - box_left[3]/2)
+        x2_l = int(box_left[0] + box_left[2]/2)
+        y2_l = int(box_left[1] + box_left[3]/2)
+        x1_r = int(box_right[0] - box_right[2]/2)
+        y1_r = int(box_right[1] - box_right[3]/2)
+        x2_r = int(box_right[0] + box_right[2]/2)
+        y2_r = int(box_right[1] + box_right[3]/2)
+        print("===============================================")
+        # x1 = int(cx-w/2)
+        # y1 = int(cy-h/2)
+        # x2 = int(cx+w/2)
+        # y2 = int(cy+h/2)
         try:
-            crop_img = frame[y1:y2, x1:x2]
-            # cv2.imshow('crop_img', crop_img)
+            crop_img_left = frame_left[y1_l:y2_l, x1_l:x2_l]
+            crop_img_right = frame_right[y1_r:y2_r, x1_r:x2_r]
+            # cv2.imshow('crop_img', crop_img_left)
+            # cv2.imshow('crop_img_right', crop_img_right)
             # cv2.waitKey(300)
             # gray_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
-            feature_points, binary_img = self_lightness.extract_feature_points(crop_img)
-            print(feature_points)
+            feature_points_left, binary_img_left,centers_left = self_lightness.extract_feature_points(crop_img_left)
+
+            feature_points_right, binary_img_right,centers_right = self_lightness.extract_feature_points(crop_img_right)
+            
+            for center in centers_left:
+                cv2.circle(crop_img_left, center, 5, (0, 0, 255), -1)
+            for center in centers_right:
+                cv2.circle(crop_img_right, center, 5, (0, 0, 255), -1)
+            cv2.imshow('frame_left', crop_img_left)
+            cv2.imshow('frame_right', crop_img_right)
+            cv2.waitKey(1)
+            point1_d = feature_points_left[0][0]+x1_l - feature_points_right[0][0]-x1_r
+
+            z = 492.3707 * 0.12 / point1_d
+            x = (feature_points_left[0][0]+x1_l - 329.10727) * z / 492.3707
+            y = (feature_points_left[0][1]+y1_l - 177.85269) * z / 492.3707
+            print(z)
+            print(x)
+            print(y)
+
+            # rvec, tvec = pnp_solver.solve_pnp(feature_points+x1)
+            # print(tvec)
+            # print(feature_points_left[0][0])
+            # print(feature_points)
+            # print('===============================================')
             # cv2.imshow('binary_img', binary_img)
-            # cv2.waitKey(300)        
+            # cv2.waitKey(300)       
+            pass 
         except Exception as e:
             print(e)
             continue
@@ -480,15 +527,16 @@ if __name__ == '__main__':
 
         # print(cx,cy)
         # print(cx,cy,w,h,vx,vy,vw,vh)
-        cv2.rectangle(frame, (int(cx-w/2), int(cy-h/2)), (int(cx+w/2), int(cy+h/2)), (255, 0, 0), 5)
+        # cv2.rectangle(frame, (int(cx-w/2), int(cy-h/2)), (int(cx+w/2), int(cy+h/2)), (255, 0, 0), 5)
 
 
         # print(box)
         # break
-        # vis_image = detector.visualize(frame, detections=results)
+        # vis_image = detector.visualize(frame_left, detections=results_l)
 
         # cv2.imshow('results', vis_image)
         # cv2.waitKey(300)
 
-    cap.release()
+    cap_left.release()
+    cap_right.release()
     cv2.destroyAllWindows()
