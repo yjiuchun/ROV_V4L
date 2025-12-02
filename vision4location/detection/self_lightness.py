@@ -1,3 +1,30 @@
+# 修复conda环境中OpenCV的Qt插件问题（必须在导入cv2之前）
+import os
+import sys
+# 尝试导入修复模块
+try:
+    # 添加src目录到路径
+    src_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src')
+    if src_dir not in sys.path:
+        sys.path.insert(0, src_dir)
+    import opencv_qt_fix
+except ImportError:
+    # 如果找不到修复模块，直接设置环境变量
+    if 'QT_QPA_PLATFORM_PLUGIN_PATH' in os.environ:
+        plugin_path = os.environ['QT_QPA_PLATFORM_PLUGIN_PATH']
+        if 'cv2/qt/plugins' in plugin_path:
+            paths = plugin_path.split(os.pathsep)
+            paths = [p for p in paths if 'cv2/qt/plugins' not in p]
+            if paths:
+                os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = os.pathsep.join(paths)
+            else:
+                system_qt_path = '/usr/lib/x86_64-linux-gnu/qt5/plugins'
+                if os.path.exists(system_qt_path):
+                    os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = system_qt_path
+                else:
+                    del os.environ['QT_QPA_PLATFORM_PLUGIN_PATH']
+    os.environ.setdefault('QT_QPA_PLATFORM', 'xcb')
+
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -95,7 +122,9 @@ class SelfLightness:
         # print(self.threshold)
         # 阈值分割
         _, binary_img = cv2.threshold(gray_img, self.threshold, 255, cv2.THRESH_BINARY)
-        cv2.imwrite('/home/yjc/Project/binary_img.jpg', binary_img)
+        cv2.imshow("binary_img", binary_img)
+        cv2.waitKey(0)
+        # cv2.imwrite('/home/yjc/Project/binary_img.jpg', binary_img)
 
         # 形态学操作，去除噪声
         if self.kernel_size > 0:
@@ -221,6 +250,88 @@ class SelfLightness:
         # cv2.waitKey(0)
         
         return feature_points, binary_img,centers
+    def get_histogram(self,img):
+        import matplotlib.pyplot as plt 
+        from scipy.signal import find_peaks
+        import os
+        output_dir = '/home/yjc/Project/rov_ws/src/vision4location/src/image_save/Hist'
+        # 读取图片
+        if img is None:
+            print(f"错误: 无法读取图片 {image_path}")
+            exit(1)
+
+        # 转换为灰度图
+        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # 计算强度直方图
+        hist = cv2.calcHist([gray_img], [0], None, [256], [0, 256])
+        hist_flat = hist.flatten()  # 将hist转换为1D数组
+
+        # 找出极值对应的强度值
+        max_count = np.max(hist)
+        min_count = np.min(hist)
+        max_intensity = np.argmax(hist)
+        min_intensity = np.argmin(hist)
+
+        # 检测所有峰值
+        # height: 峰值的最小高度（设为最大值的5%以避免噪声）
+        # distance: 峰值之间的最小距离（设为5，避免检测到相邻的微小波动）
+        # prominence: 峰值的最小突出度（设为最大值的3%）
+        min_height = max_count * 0.05
+        min_distance = 5
+        min_prominence = max_count * 0.03
+
+        peaks, properties = find_peaks(hist_flat, 
+                                    height=min_height,
+                                    distance=min_distance,
+                                    prominence=min_prominence)
+
+        peak_intensities = peaks
+        peak_counts = hist_flat[peaks]
+
+        for i, (intensity, count) in enumerate(zip(peak_intensities, peak_counts), 1):
+            pass
+        # 绘制并保存直方图
+        plt.figure(figsize=(10, 6))
+        plt.plot(hist, color='black')
+        plt.title('Grayscale Intensity Histogram', fontsize=14)
+        plt.xlabel('Pixel Intensity Value', fontsize=12)
+        plt.ylabel('Pixel Count', fontsize=12)
+        plt.grid(True, alpha=0.3)
+        plt.xlim([0, 255])
+
+        # 标注所有峰值点
+        if len(peak_intensities) > 0:
+            plt.plot(peak_intensities, peak_counts, 'ro', markersize=6, label=f'Peaks ({len(peak_intensities)} found)')
+            # 标注每个峰值
+            for intensity, count in zip(peak_intensities, peak_counts):
+                plt.annotate(f'I={intensity}\nC={int(count)}', 
+                            xy=(intensity, count), 
+                            xytext=(intensity + 15, count + max_count*0.05),
+                            arrowprops=dict(arrowstyle='->', color='red', lw=1.0, alpha=0.7),
+                            fontsize=8, color='red', weight='bold',
+                            bbox=dict(boxstyle='round,pad=0.3', facecolor='yellow', alpha=0.3))
+
+        # 标注全局最大值点（用不同颜色区分）
+        plt.plot(max_intensity, max_count, 'g*', markersize=12, label=f'Global Max: I={max_intensity}')
+
+        # 标注最小值点（如果最小值不为0，也标注出来）
+        if min_count > 0:
+            plt.plot(min_intensity, min_count, 'bo', markersize=8, label=f'Min: Intensity={min_intensity}, Count={int(min_count)}')
+            plt.annotate(f'Min: I={min_intensity}\nC={int(min_count)}', 
+                        xy=(min_intensity, min_count), 
+                        xytext=(min_intensity + 20, min_count + max_count*0.05),
+                        arrowprops=dict(arrowstyle='->', color='blue', lw=1.5),
+                        fontsize=10, color='blue', weight='bold')
+
+        plt.legend(loc='upper right', fontsize=9)
+
+        # 保存直方图
+        hist_output_path = os.path.join(output_dir, 'Hist_img.png')
+        plt.savefig(hist_output_path, dpi=150, bbox_inches='tight')
+
+        plt.close()
+
 
 
 if __name__ == '__main__':
