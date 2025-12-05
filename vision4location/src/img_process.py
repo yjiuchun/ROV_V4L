@@ -71,13 +71,16 @@ class ImgProcess:
         end_time = time.time()
         duration = end_time - start_time
         
-        # 获取crop的尺寸
-        crop_height, crop_width = crop_img.shape[:2]
-        # 使用crop尺寸作为文件名
-        filename = f"crop_img_{crop_width}x{crop_height}.jpg"
-        cv2.imwrite(f"/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/{filename}", crop_img)
+
         return box,x_offset,duration,crop_img,results
     def selfLightness(self,img):
-        return self.self_lightness.get_histogram(img)
+        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        top_left_image, top_right_image, bottom_left_image, bottom_right_image = self.self_lightness.split_image(gray_img)
+        top_left_binary_img = self.self_lightness.binary_image(top_left_image)
+        top_right_binary_img = self.self_lightness.binary_image(top_right_image)
+        bottom_left_binary_img = self.self_lightness.binary_image(bottom_left_image)
+        bottom_right_binary_img = self.self_lightness.binary_image(bottom_right_image)
+        composite_image = self.self_lightness.composite_image(top_left_binary_img, top_right_binary_img, bottom_left_binary_img, bottom_right_binary_img)
+        return top_left_binary_img , top_right_binary_img , bottom_left_binary_img , bottom_right_binary_img , composite_image
     def mediaFilter(self,img):
         return self.media_filter.filter(img)
