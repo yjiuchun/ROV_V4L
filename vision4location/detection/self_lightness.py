@@ -30,7 +30,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
 import os
-
+scripts_dir = '/home/yjc/Project/rov_ws/src/vision4location/scripts'
+if scripts_dir not in sys.path:
+    sys.path.insert(0, scripts_dir)
+from get_lightness_peak import GetLightnessPeak
+from img_spilt import ImageSplitter
 
 class SelfLightness:
     def __init__(self, config_name='self_lightness.yaml', folder='/home/yjc/Project/rov_ws/src/vision4location/detection/config/',show_image=False):
@@ -38,87 +42,55 @@ class SelfLightness:
         self.kernel_size = 0
         self.show_image = show_image
         self.box=np.eye(4,4) # 4x4的单位矩阵
+        self.img_size_factor = 0.02
+        self.lightness_offset = 50
         # 加载配置
         self.load_config(config_name,folder)
+        self.lightness_peak_detector = GetLightnessPeak()
+        self.image_splitter = ImageSplitter()
 
     def load_config(self,config_name,folder):
         pass
-    def get_lightness_peak(self,image):
-        # gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        gray_img = image
-        hist = cv2.calcHist([gray_img], [0], None, [256], [0, 256])
-        hist_flat = hist.flatten()  # 将hist转换为1D数组
+    def get_binary_offset(self,image):
+        height, width = image.shape[:2]
+        print(height, width)
+        return ((height+width) / 2 - self.lightness_offset) * self.img_size_factor
+    
+    def get_lightness_peak(self, image_or_path, output_path=None, save_image=False):
+        """
+        获取亮度峰值（返回图像的最大值强度）
+        
+        参数:
+            image_or_path: 图片数组或图片路径
+            output_path: 输出路径（用于保存直方图，可选）
+            save_image: 是否保存直方图（已废弃，保留以兼容旧代码）
+        
+        返回:
+            max_intensity: 图像的最大亮度强度值（0-255）
+        """
+        # 获取最大值点的x坐标列表（同时会保存max_value）
+        max_x_list = self.lightness_peak_detector.get_lightness_peaks(image_or_path)
+        
+        # 返回图像的最大值强度
+        return int(self.lightness_peak_detector.max_value) 
+    def split_image(self,image):
+        split_images = self.image_splitter.split_image(image)
+        return split_images
 
-        # 找出极值对应的强度值
-        max_count = np.max(hist)
-        min_count = np.min(hist)
-        max_intensity = np.argmax(hist)
-        min_intensity = np.argmin(hist)
+    def binary_image(self,gray_img):
 
-        # 检测所有峰值
-        # height: 峰值的最小高度（设为最大值的5%以避免噪声）
-        # distance: 峰值之间的最小距离（设为5，避免检测到相邻的微小波动）
-        # prominence: 峰值的最小突出度（设为最大值的3%）
-        min_height = max_count * 0.05
-        min_distance = 5
-        min_prominence = max_count * 0.03
-
-        peaks, properties = find_peaks(hist_flat, 
-                                    height=min_height,
-                                    distance=min_distance,
-                                    prominence=min_prominence)
-
-        peak_intensities = peaks
-        peak_counts = hist_flat[peaks]
-        if 0:
-            # 绘制并保存直方图
-            plt.figure(figsize=(10, 6))
-            plt.plot(hist, color='black')
-            plt.title('Grayscale Intensity Histogram', fontsize=14)
-            plt.xlabel('Pixel Intensity Value', fontsize=12)
-            plt.ylabel('Pixel Count', fontsize=12)
-            plt.grid(True, alpha=0.3)
-            plt.xlim([0, 255])
-            # 标注所有峰值点
-            if len(peak_intensities) > 0:
-                plt.plot(peak_intensities, peak_counts, 'ro', markersize=6, label=f'Peaks ({len(peak_intensities)} found)')
-                # 标注每个峰值
-                for intensity, count in zip(peak_intensities, peak_counts):
-                    plt.annotate(f'I={intensity}\nC={int(count)}', 
-                                xy=(intensity, count), 
-                                xytext=(intensity + 15, count + max_count*0.05),
-                                arrowprops=dict(arrowstyle='->', color='red', lw=1.0, alpha=0.7),
-                                fontsize=8, color='red', weight='bold',
-                                bbox=dict(boxstyle='round,pad=0.3', facecolor='yellow', alpha=0.3))
-
-            # 标注全局最大值点（用不同颜色区分）
-            plt.plot(max_intensity, max_count, 'g*', markersize=12, label=f'Global Max: I={max_intensity}')
-
-            # 标注最小值点（如果最小值不为0，也标注出来）
-            if min_count > 0:
-                plt.plot(min_intensity, min_count, 'bo', markersize=8, label=f'Min: Intensity={min_intensity}, Count={int(min_count)}')
-                plt.annotate(f'Min: I={min_intensity}\nC={int(min_count)}', 
-                            xy=(min_intensity, min_count), 
-                            xytext=(min_intensity + 20, min_count + max_count*0.05),
-                            arrowprops=dict(arrowstyle='->', color='blue', lw=1.5),
-                            fontsize=10, color='blue', weight='bold')
-
-            plt.legend(loc='upper right', fontsize=9)
-
-            # 保存直方图
-            hist_output_path = os.path.join('./', 'four_light_histogram.png')
-            plt.savefig(hist_output_path, dpi=150, bbox_inches='tight')
-            print(f"直方图已保存到: {hist_output_path}")
-
-            plt.close()
-
-            print("处理完成！")
-        # print(peaks)
-        return max(peaks) 
+        self.threshold = self.get_lightness_peak(gray_img)-10+self.get_binary_offset(gray_img)
+        # print(self.threshold)
+        # 阈值分割
+        _, binary_img = cv2.threshold(gray_img, self.threshold, 255, cv2.THRESH_BINARY)
+        return binary_img
+    def composite_image(self,top_left_binary_img, top_right_binary_img, bottom_left_binary_img, bottom_right_binary_img):
+        composite_image = self.image_splitter.composite_image(top_left_binary_img, top_right_binary_img, bottom_left_binary_img, bottom_right_binary_img)
+        return composite_image
 
     def extract_feature_points(self,image):
         gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        self.threshold = self.get_lightness_peak(gray_img) + 50
+        self.threshold = self.get_lightness_peak(gray_img)-self.get_binary_offset(gray_img)
         # print(self.threshold)
         # 阈值分割
         _, binary_img = cv2.threshold(gray_img, self.threshold, 255, cv2.THRESH_BINARY)
@@ -250,93 +222,22 @@ class SelfLightness:
         # cv2.waitKey(0)
         
         return feature_points, binary_img,centers
-    def get_histogram(self,img):
-        import matplotlib.pyplot as plt 
-        from scipy.signal import find_peaks
-        import os
-        output_dir = '/home/yjc/Project/rov_ws/src/vision4location/src/image_save/Hist'
-        # 读取图片
-        if img is None:
-            print(f"错误: 无法读取图片 {image_path}")
-            exit(1)
-
-        # 转换为灰度图
-        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        # 计算强度直方图
-        hist = cv2.calcHist([gray_img], [0], None, [256], [0, 256])
-        hist_flat = hist.flatten()  # 将hist转换为1D数组
-
-        # 找出极值对应的强度值
-        max_count = np.max(hist)
-        min_count = np.min(hist)
-        max_intensity = np.argmax(hist)
-        min_intensity = np.argmin(hist)
-
-        # 检测所有峰值
-        # height: 峰值的最小高度（设为最大值的5%以避免噪声）
-        # distance: 峰值之间的最小距离（设为5，避免检测到相邻的微小波动）
-        # prominence: 峰值的最小突出度（设为最大值的3%）
-        min_height = max_count * 0.05
-        min_distance = 5
-        min_prominence = max_count * 0.03
-
-        peaks, properties = find_peaks(hist_flat, 
-                                    height=min_height,
-                                    distance=min_distance,
-                                    prominence=min_prominence)
-
-        peak_intensities = peaks
-        peak_counts = hist_flat[peaks]
-
-        for i, (intensity, count) in enumerate(zip(peak_intensities, peak_counts), 1):
-            pass
-        # 绘制并保存直方图
-        plt.figure(figsize=(10, 6))
-        plt.plot(hist, color='black')
-        plt.title('Grayscale Intensity Histogram', fontsize=14)
-        plt.xlabel('Pixel Intensity Value', fontsize=12)
-        plt.ylabel('Pixel Count', fontsize=12)
-        plt.grid(True, alpha=0.3)
-        plt.xlim([0, 255])
-
-        # 标注所有峰值点
-        if len(peak_intensities) > 0:
-            plt.plot(peak_intensities, peak_counts, 'ro', markersize=6, label=f'Peaks ({len(peak_intensities)} found)')
-            # 标注每个峰值
-            for intensity, count in zip(peak_intensities, peak_counts):
-                plt.annotate(f'I={intensity}\nC={int(count)}', 
-                            xy=(intensity, count), 
-                            xytext=(intensity + 15, count + max_count*0.05),
-                            arrowprops=dict(arrowstyle='->', color='red', lw=1.0, alpha=0.7),
-                            fontsize=8, color='red', weight='bold',
-                            bbox=dict(boxstyle='round,pad=0.3', facecolor='yellow', alpha=0.3))
-
-        # 标注全局最大值点（用不同颜色区分）
-        plt.plot(max_intensity, max_count, 'g*', markersize=12, label=f'Global Max: I={max_intensity}')
-
-        # 标注最小值点（如果最小值不为0，也标注出来）
-        if min_count > 0:
-            plt.plot(min_intensity, min_count, 'bo', markersize=8, label=f'Min: Intensity={min_intensity}, Count={int(min_count)}')
-            plt.annotate(f'Min: I={min_intensity}\nC={int(min_count)}', 
-                        xy=(min_intensity, min_count), 
-                        xytext=(min_intensity + 20, min_count + max_count*0.05),
-                        arrowprops=dict(arrowstyle='->', color='blue', lw=1.5),
-                        fontsize=10, color='blue', weight='bold')
-
-        plt.legend(loc='upper right', fontsize=9)
-
-        # 保存直方图
-        hist_output_path = os.path.join(output_dir, 'Hist_img.png')
-        plt.savefig(hist_output_path, dpi=150, bbox_inches='tight')
-
-        plt.close()
 
 
 
 if __name__ == '__main__':
     self_lightness = SelfLightness(show_image=True)
-    image_path = '/home/yjc/Project/rov_ws/demo/images/20251110-154306.jpg'
+    image_path = '/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/crop_img_152x144.jpg'
     image = cv2.imread(image_path)
-    feature_points, binary_img = self_lightness.extract_feature_points(image)
-    print(f"检测到的特征点坐标: {feature_points}")
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    top_left_image, top_right_image, bottom_left_image, bottom_right_image = self_lightness.split_image(gray_image)
+    top_left_binary_img = self_lightness.binary_image(top_left_image)
+    top_right_binary_img = self_lightness.binary_image(top_right_image)
+    bottom_left_binary_img = self_lightness.binary_image(bottom_left_image)
+    bottom_right_binary_img = self_lightness.binary_image(bottom_right_image)
+    composite_image = self_lightness.composite_image(top_left_binary_img, top_right_binary_img, bottom_left_binary_img, bottom_right_binary_img)
+    cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/top_left_binary_img.jpg", top_left_binary_img)
+    cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/top_right_binary_img.jpg", top_right_binary_img)
+    cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/bottom_left_binary_img.jpg", bottom_left_binary_img)
+    cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/bottom_right_binary_img.jpg", bottom_right_binary_img)
+    cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/composite_image.jpg", composite_image)

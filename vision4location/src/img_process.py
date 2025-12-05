@@ -70,6 +70,12 @@ class ImgProcess:
         crop_img = img[y1:y2, x1:x2]
         end_time = time.time()
         duration = end_time - start_time
+        
+        # 获取crop的尺寸
+        crop_height, crop_width = crop_img.shape[:2]
+        # 使用crop尺寸作为文件名
+        filename = f"crop_img_{crop_width}x{crop_height}.jpg"
+        cv2.imwrite(f"/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/{filename}", crop_img)
         return box,x_offset,duration,crop_img,results
     def selfLightness(self,img):
         return self.self_lightness.get_histogram(img)

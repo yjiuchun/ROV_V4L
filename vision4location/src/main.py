@@ -29,15 +29,15 @@ from img_process import ImgProcess
 import cv2
 if __name__ == "__main__":
     img_process = ImgProcess(model_path="/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11/firsttrain_withledring/firsttrainledring/weights/best.pt")
-    img = cv2.imread("/home/yjc/Project/rov_ws/output_images/37.jpg")
+    img = cv2.imread("/home/yjc/Project/rov_ws/output_images/2.jpg")
     box,x_offset,duration,crop_img,results  = img_process.GetRoI(img)
-    self_lightness = img_process.selfLightness(img_process.mediaFilter(crop_img))
+    # self_lightness = img_process.selfLightness(img_process.mediaFilter(crop_img))
 
     # vis_image = img_process.yolo_detector.visualize(img, detections=results)
     # cv2.imshow('results', vis_image)
     # cv2.rectangle(img, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (0, 0, 255), 2)
     # cv2.imshow("img", img)
     # print(duration)
-    # cv2.imshow("crop_img", crop_img)
+    # cv2.imwrite("./crop_img.jpg", crop_img)
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
