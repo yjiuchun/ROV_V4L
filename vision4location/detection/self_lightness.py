@@ -1,6 +1,8 @@
 # 修复conda环境中OpenCV的Qt插件问题（必须在导入cv2之前）
 import os
 import sys
+import math
+
 # 尝试导入修复模块
 try:
     # 添加src目录到路径
@@ -53,8 +55,8 @@ class SelfLightness:
         pass
     def get_binary_offset(self,image):
         height, width = image.shape[:2]
-        print(height, width)
-        return ((height+width) / 2 - self.lightness_offset) * self.img_size_factor
+        offset = ((height+width) / 2 - self.lightness_offset) * self.img_size_factor
+        return offset
     
     def get_lightness_peak(self, image_or_path, output_path=None, save_image=False):
         """
@@ -76,10 +78,45 @@ class SelfLightness:
     def split_image(self,image):
         split_images = self.image_splitter.split_image(image)
         return split_images
+    def calculate_angle(self, center, point):
+        """
+        计算point相对于center的极角（单位：弧度）
+        极角范围：-π ~ π（对应-180°~180°），转换后为0~360°更易理解
+        """
+        dx = point[0] - center[0]  # 点到中心的x轴距离
+        dy = point[1] - center[1]  # 点到中心的y轴距离
+        # 计算极角（atan2能正确区分四个象限）
+        angle = math.atan2(dy, dx)
+        # 转换为0~360°的角度（方便理解）
+        angle_degree = math.degrees(angle)
+        if angle_degree < 0:
+            angle_degree += 360
+        return angle_degree
+    def get_key_point_queue(self,points, start_point):
+        # 步骤1：计算均值点（旋转中心）
+        x_coords = [p[0] for p in points]
+        y_coords = [p[1] for p in points]
+        center = (sum(x_coords)/4, sum(y_coords)/4)
+        
+        # 步骤2：给每个点计算极角，按极角降序排序（顺时针）
+        # 先给点绑定极角，格式：(点, 极角)
+        points_with_angle = [(p, self.calculate_angle(center, p)) for p in points]
+        # 按极角从大到小排序（极角大=更顺时针）
+        sorted_points = sorted(points_with_angle, key=lambda x: -x[1])
+        # 提取排序后的点（去掉极角）
+        sorted_points = [p[0] for p in sorted_points]
+        
+        # 步骤3：调整起点到第一个位置
+        # 找到起点的索引
+        start_idx = sorted_points.index(start_point)
+        # 重新排列：起点及后面的点 + 起点前面的点
+        final_sorted = sorted_points[start_idx:] + sorted_points[:start_idx]
+        
+        return final_sorted  # 返回排序结果和中心
 
     def binary_image(self,gray_img):
 
-        self.threshold = self.get_lightness_peak(gray_img)-10+self.get_binary_offset(gray_img)
+        self.threshold = self.get_lightness_peak(gray_img)-10+self.get_binary_offset(gray_img) * 0
         # print(self.threshold)
         # 阈值分割
         _, binary_img = cv2.threshold(gray_img, self.threshold, 255, cv2.THRESH_BINARY)

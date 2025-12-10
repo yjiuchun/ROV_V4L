@@ -73,7 +73,7 @@ class ImgProcess:
         
 
         return box,x_offset,duration,crop_img,results
-    def selfLightness(self,img):
+    def selfLightness_split(self,img):
         gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         top_left_image, top_right_image, bottom_left_image, bottom_right_image = self.self_lightness.split_image(gray_img)
         top_left_binary_img = self.self_lightness.binary_image(top_left_image)
@@ -82,5 +82,9 @@ class ImgProcess:
         bottom_right_binary_img = self.self_lightness.binary_image(bottom_right_image)
         composite_image = self.self_lightness.composite_image(top_left_binary_img, top_right_binary_img, bottom_left_binary_img, bottom_right_binary_img)
         return top_left_binary_img , top_right_binary_img , bottom_left_binary_img , bottom_right_binary_img , composite_image
+    def selfLightness_notsplit(self,img):
+        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        binary_img = self.self_lightness.binary_image(gray_img)
+        return binary_img
     def mediaFilter(self,img):
         return self.media_filter.filter(img)
