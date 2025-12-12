@@ -37,6 +37,7 @@ if scripts_dir not in sys.path:
     sys.path.insert(0, scripts_dir)
 from get_lightness_peak import GetLightnessPeak
 from img_spilt import ImageSplitter
+from ROI_local_img import ROISegmenter
 
 class SelfLightness:
     def __init__(self, config_name='self_lightness.yaml', folder='/home/yjc/Project/rov_ws/src/vision4location/detection/config/',show_image=False):
@@ -50,13 +51,20 @@ class SelfLightness:
         self.load_config(config_name,folder)
         self.lightness_peak_detector = GetLightnessPeak()
         self.image_splitter = ImageSplitter()
+        self.roi_segmenter = ROISegmenter(shape='circle', size=30)
+        self.roi_circle_size = 30
 
     def load_config(self,config_name,folder):
         pass
+
     def get_binary_offset(self,image):
         height, width = image.shape[:2]
         offset = ((height+width) / 2 - self.lightness_offset) * self.img_size_factor
         return offset
+
+    def get_roi_image(self,image,points):
+        roi_images = self.roi_segmenter.extract_roi(image, points, side_length_or_diameter=self.roi_circle_size)
+        return roi_images
     
     def get_lightness_peak(self, image_or_path, output_path=None, save_image=False):
         """
@@ -264,17 +272,30 @@ class SelfLightness:
 
 if __name__ == '__main__':
     self_lightness = SelfLightness(show_image=True)
-    image_path = '/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/crop_img_152x144.jpg'
+    image_path = '/home/yjc/Project/rov_ws/output_images/33.jpg'
     image = cv2.imread(image_path)
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    top_left_image, top_right_image, bottom_left_image, bottom_right_image = self_lightness.split_image(gray_image)
-    top_left_binary_img = self_lightness.binary_image(top_left_image)
-    top_right_binary_img = self_lightness.binary_image(top_right_image)
-    bottom_left_binary_img = self_lightness.binary_image(bottom_left_image)
-    bottom_right_binary_img = self_lightness.binary_image(bottom_right_image)
-    composite_image = self_lightness.composite_image(top_left_binary_img, top_right_binary_img, bottom_left_binary_img, bottom_right_binary_img)
-    cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/top_left_binary_img.jpg", top_left_binary_img)
-    cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/top_right_binary_img.jpg", top_right_binary_img)
-    cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/bottom_left_binary_img.jpg", bottom_left_binary_img)
-    cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/bottom_right_binary_img.jpg", bottom_right_binary_img)
-    cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/composite_image.jpg", composite_image)
+    points = [(308, 122), (308, 164), (349, 164), (349, 122)]
+    roi_images = self_lightness.get_roi_image(gray_image, points)
+    binary_images = []
+    for i, roi_image in enumerate(roi_images):
+        binary_image = self_lightness.binary_image(roi_image)
+        binary_images.append(binary_image)
+    composite_image = self_lightness.roi_segmenter.combine_rois(points, binary_images, image.shape, side_length_or_diameter=30)
+    cv2.imshow("composite_image", composite_image)
+    cv2.waitKey(0)
+
+    # composite_image = self_lightness.composite_image(binary_images)
+    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/scripts/image/composite_image.jpg", composite_image)
+
+    # top_left_image, top_right_image, bottom_left_image, bottom_right_image = self_lightness.split_image(gray_image)
+    # top_left_binary_img = self_lightness.binary_image(top_left_image)
+    # top_right_binary_img = self_lightness.binary_image(top_right_image)
+    # bottom_left_binary_img = self_lightness.binary_image(bottom_left_image)
+    # bottom_right_binary_img = self_lightness.binary_image(bottom_right_image)
+    # composite_image = self_lightness.composite_image(top_left_binary_img, top_right_binary_img, bottom_left_binary_img, bottom_right_binary_img)
+    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/top_left_binary_img.jpg", top_left_binary_img)
+    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/top_right_binary_img.jpg", top_right_binary_img)
+    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/bottom_left_binary_img.jpg", bottom_left_binary_img)
+    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/bottom_right_binary_img.jpg", bottom_right_binary_img)
+    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/2/composite_image.jpg", composite_image)
