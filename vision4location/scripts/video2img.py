@@ -180,7 +180,7 @@ class VideoToImageConverter:
         # 提取帧
         success_count = 0
         current_frame = 0
-        frame_index = 37
+        frame_index = 0
         
         while cap.isOpened():
             ret, frame = cap.read()

@@ -272,17 +272,21 @@ class SelfLightness:
 
 if __name__ == '__main__':
     self_lightness = SelfLightness(show_image=True)
-    image_path = '/home/yjc/Project/rov_ws/output_images/33.jpg'
+    image_path = '/home/yjc/Project/rov_ws/underwater_dataset/images/first_capture/right/27.jpg'
     image = cv2.imread(image_path)
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    points = [(308, 122), (308, 164), (349, 164), (349, 122)]
+    points = [(220, 168), (394, 145), (416, 307), (242, 331)]
     roi_images = self_lightness.get_roi_image(gray_image, points)
     binary_images = []
-    for i, roi_image in enumerate(roi_images):
+    for i, roi_image in enumerate(roi_images): 
         binary_image = self_lightness.binary_image(roi_image)
         binary_images.append(binary_image)
     composite_image = self_lightness.roi_segmenter.combine_rois(points, binary_images, image.shape, side_length_or_diameter=30)
     cv2.imshow("composite_image", composite_image)
+    cv2.imshow("image1", roi_images[0])
+    cv2.imshow("image2", roi_images[1])
+    cv2.imshow("image3", roi_images[2])
+    cv2.imshow("image4", roi_images[3])
     cv2.waitKey(0)
 
     # composite_image = self_lightness.composite_image(binary_images)
