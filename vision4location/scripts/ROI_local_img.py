@@ -423,8 +423,30 @@ class ROISegmenter:
         roi_end_x = min(roi_end_x, roi_w)
         roi_end_y = min(roi_end_y, roi_h)
         
+        # 计算目标区域的实际大小
+        target_h = y2 - y1
+        target_w = x2 - x1
+        
+        # 检查目标区域是否有效
+        if target_h <= 0 or target_w <= 0:
+            return  # 无效区域，直接返回
+        
+        # 确保 roi_start 和 roi_end 有效
+        roi_start_x = max(0, min(roi_start_x, roi_w))
+        roi_start_y = max(0, min(roi_start_y, roi_h))
+        roi_end_x = max(roi_start_x, min(roi_end_x, roi_w))
+        roi_end_y = max(roi_start_y, min(roi_end_y, roi_h))
+        
+        # 检查提取区域是否有效
+        if roi_end_x <= roi_start_x or roi_end_y <= roi_start_y:
+            return  # 无效区域，直接返回
+        
         # 提取要放置的ROI部分
         roi_patch = roi[roi_start_y:roi_end_y, roi_start_x:roi_end_x]
+        
+        # 检查 roi_patch 是否为空
+        if roi_patch.size == 0:
+            return  # 空ROI，直接返回
         
         # 处理灰度ROI：如果ROI是灰度图但combined_image是彩色图，需要转换
         if len(roi_patch.shape) == 2 and len(combined_image.shape) == 3:
@@ -434,9 +456,17 @@ class ROISegmenter:
             # 如果ROI是彩色但combined_image是灰度，转换为灰度
             roi_patch = cv2.cvtColor(roi_patch, cv2.COLOR_BGR2GRAY)
         
-        # 创建圆形掩码
+        # 确保 roi_patch 与目标区域大小匹配
         patch_h, patch_w = roi_patch.shape[:2]
-        mask = np.zeros((patch_h, patch_w), dtype=np.uint8)
+        if patch_h != target_h or patch_w != target_w:
+            # 如果大小不匹配，调整 roi_patch 的大小
+            if patch_h > 0 and patch_w > 0 and target_h > 0 and target_w > 0:
+                roi_patch = cv2.resize(roi_patch, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
+            else:
+                return  # 无效尺寸，直接返回
+        
+        # 创建圆形掩码（使用目标区域大小）
+        mask = np.zeros((target_h, target_w), dtype=np.uint8)
         
         # 计算在patch中的圆心坐标
         local_center_x = center_x - x1

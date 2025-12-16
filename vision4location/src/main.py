@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     # 目标文件夹路径（替换为你的文件夹路径）
     folder_path = "/home/yjc/Project/rov_ws/output_images"  # Linux/macOS
-    img_process = ImgProcess(model_path="/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11/firsttrain_withledring/firsttrainledring/weights/best.pt")
+    img_process = ImgProcess(yolo="/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11/firsttrain_withledring/firsttrainledring/weights/best.pt",yoloseg="/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11_seg/seg_second_train/led_sys_seg/weights/best.pt")
     # 遍历文件夹内所有文件
     for filename in os.listdir(folder_path):
         # 筛选 .jpg / .JPG（大小写兼容）

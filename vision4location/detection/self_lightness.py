@@ -65,6 +65,11 @@ class SelfLightness:
     def get_roi_image(self,image,points):
         roi_images = self.roi_segmenter.extract_roi(image, points, side_length_or_diameter=self.roi_circle_size)
         return roi_images
+    def combine_rois(self,points,binary_images,image_shape,side_length_or_diameter=None):
+        if side_length_or_diameter is None:
+            side_length_or_diameter = self.roi_circle_size
+        composite_image = self.roi_segmenter.combine_rois(points, binary_images, image_shape, side_length_or_diameter=side_length_or_diameter)
+        return composite_image
     
     def get_lightness_peak(self, image_or_path, output_path=None, save_image=False):
         """
@@ -110,7 +115,7 @@ class SelfLightness:
         # 先给点绑定极角，格式：(点, 极角)
         points_with_angle = [(p, self.calculate_angle(center, p)) for p in points]
         # 按极角从大到小排序（极角大=更顺时针）
-        sorted_points = sorted(points_with_angle, key=lambda x: -x[1])
+        sorted_points = sorted(points_with_angle, key=lambda x: -x[1]) 
         # 提取排序后的点（去掉极角）
         sorted_points = [p[0] for p in sorted_points]
         

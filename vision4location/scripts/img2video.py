@@ -19,6 +19,7 @@ import argparse
 from pathlib import Path
 from typing import List, Optional
 import glob
+import re
 
 
 class ImageToVideoConverter:
@@ -40,6 +41,30 @@ class ImageToVideoConverter:
     def __init__(self):
         """初始化转换器"""
         pass
+    
+    def _natural_sort_key(self, filepath: str) -> tuple:
+        """
+        生成自然排序的键值，支持按文件名中的数字排序
+        
+        参数:
+            filepath: 文件路径
+        
+        返回:
+            sort_key: 用于排序的元组
+        """
+        # 获取文件名（不含路径）
+        filename = os.path.basename(filepath)
+        # 将文件名分割为文本和数字部分
+        # 例如: "image_13.jpg" -> ["image_", "13", ".jpg"]
+        parts = re.split(r'(\d+)', filename)
+        # 将数字部分转换为整数，文本部分保持原样
+        sort_key = []
+        for part in parts:
+            if part.isdigit():
+                sort_key.append(int(part))
+            else:
+                sort_key.append(part.lower())  # 不区分大小写
+        return tuple(sort_key)
     
     def get_image_files(self, folder_path: str, 
                        extensions: Optional[List[str]] = None) -> List[str]:
@@ -72,8 +97,9 @@ class ImageToVideoConverter:
             image_files.extend(glob.glob(pattern1))
             image_files.extend(glob.glob(pattern2))
         
-        # 去重并排序
-        image_files = sorted(list(set(image_files)))
+        # 去重并按自然顺序排序（支持数字排序）
+        image_files = list(set(image_files))
+        image_files.sort(key=self._natural_sort_key)
         
         return image_files
     
@@ -135,7 +161,8 @@ class ImageToVideoConverter:
             image_files.sort(key=lambda x: os.path.getmtime(x))
             print("按修改时间排序")
         else:
-            print("按文件名排序")
+            # 按文件名自然排序（已由get_image_files完成，支持数字排序）
+            print("按文件名自然排序（支持数字顺序）")
         
         # 读取第一张图像以确定尺寸
         first_image = cv2.imread(image_files[0])

@@ -222,7 +222,7 @@ class GetLightnessPeak:
                                   linewidth=0,
                                   antialiased=True,
                                   alpha=0.9)
-            colorbar_obj = fig.colorbar(surf, ax=ax, shrink=0.5, aspect=20, label='亮度值')
+            colorbar_obj = fig.colorbar(surf, ax=ax, shrink=0.5, aspect=20, label='Lightness value')
         else:  # scatter mode
             # 创建坐标和亮度值数组
             x = np.arange(0, width)
@@ -238,7 +238,7 @@ class GetLightnessPeak:
                                 cmap=colormap,
                                 s=1,
                                 alpha=0.6)
-            colorbar_obj = plt.colorbar(scatter, ax=ax, shrink=0.5, aspect=20, label='亮度值')
+            colorbar_obj = plt.colorbar(scatter, ax=ax, shrink=0.5, aspect=20, label='Lightness value')
         
         # 标记极值点
         if mark_extrema:
@@ -247,14 +247,14 @@ class GetLightnessPeak:
                 print(f"最大值点数量: {len(max_x_list)}")
                 ax.scatter(max_x_list, max_y_list, max_z_list,
                           c='red', s=200, marker='^',
-                          label=f'最大值点 (值={extrema_info["max_value"]})',
+                          label=f'max point (value={extrema_info["max_value"]})',
                           edgecolors='darkred', linewidths=2, zorder=10)
             
             # 标记最小值点（蓝色）
             if min_x_list:
                 ax.scatter(min_x_list, min_y_list, min_z_list,
                           c='blue', s=200, marker='v',
-                          label=f'最小值点 (值={extrema_info["min_value"]})',
+                          label=f'min point (value={extrema_info["min_value"]})',
                           edgecolors='darkblue', linewidths=2, zorder=10)
             
             # 添加图例
@@ -262,9 +262,9 @@ class GetLightnessPeak:
                 ax.legend(loc='upper left')
         
         # 设置标签和标题
-        ax.set_xlabel('X (像素)', fontsize=12)
-        ax.set_ylabel('Y (像素)', fontsize=12)
-        ax.set_zlabel('亮度值', fontsize=12)
+        ax.set_xlabel('X (pixel)', fontsize=12)
+        ax.set_ylabel('Y (pixel)', fontsize=12)
+        ax.set_zlabel('Lightness value', fontsize=12)
         
         if title is None:
             title = '3D Lightness Visualization'
@@ -305,7 +305,7 @@ if __name__ == "__main__":
     get_lightness_peak = GetLightnessPeak()
     
     # 测试1: 使用路径
-    image_path = '/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/spilt_cropimg/crop_img_40x42_1.jpg'
+    image_path = '/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/image2.jpg'
     
     # 获取最大值点的x坐标列表
     max_x_list = get_lightness_peak.get_lightness_peaks(image_path)
@@ -318,7 +318,7 @@ if __name__ == "__main__":
         image_path,
         show=False,
         save=True,
-        save_path='/home/yjc/Project/rov_ws/src/vision4location/src/image_save/crop_img/spilt_cropimg/crop_img_40x42_1_3d.png'
+        save_path='/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/image2_3d.png'
     )
     
     # 测试2: 使用图片数组

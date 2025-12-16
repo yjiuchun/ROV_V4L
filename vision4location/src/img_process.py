@@ -35,6 +35,10 @@ import time
 yolo_dir = '/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11'
 if yolo_dir not in sys.path:
     sys.path.insert(0, yolo_dir)
+
+yoloseg_dir = '/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11_seg'
+if yoloseg_dir not in sys.path:
+    sys.path.insert(0, yoloseg_dir)
 # detection路径
 detection_dir = '/home/yjc/Project/rov_ws/src/vision4location/detection'
 if detection_dir not in sys.path:
@@ -50,17 +54,22 @@ if kalmanfilter_dir not in sys.path:
 enhance_dir = '/home/yjc/Project/rov_ws/src/vision4location/enhance'
 if enhance_dir not in sys.path:
     sys.path.insert(0, enhance_dir)
-
+scripts_dir = '/home/yjc/Project/rov_ws/src/vision4location/scripts'
+if scripts_dir not in sys.path:
+    sys.path.insert(0, scripts_dir)
+from extrema_detector import ExtremaDetector
 from yolov11_tarctor import YOLOv11Detector
+from yolov11seg_tarctor import YOLOv11SegDetector
 from self_lightness import SelfLightness
 from MdeiaFilter import MediaFilter
 class ImgProcess:
-    def __init__(self,model_path="yolo11n.pt"):
+    def __init__(self,yolo="yolo11n.pt",yoloseg="yolo11n-seg.pt"):
 
-        self.yolo_detector = YOLOv11Detector(model_path=model_path)     # YOLOv11目标检测
+        self.yolo_detector = YOLOv11Detector(model_path=yolo)     # YOLOv11目标检测
+        self.yolo_seg_detector = YOLOv11SegDetector(model_path=yoloseg) # YOLOv11分割检测
         self.self_lightness = SelfLightness(show_image=False)          # 照度检测
         self.media_filter = MediaFilter()                              # 图像滤波
-        
+        self.extrema_detector = ExtremaDetector()                      # 极值点检测
     def GetRoI(self, img):
         start_time = time.time()
         results,box,x_offset = self.yolo_detector.detect(img)
@@ -71,8 +80,20 @@ class ImgProcess:
         end_time = time.time()
         duration = end_time - start_time
         
-
         return box,x_offset,duration,crop_img,results
+    def GetRoI_seg(self, img):
+        masks, results = self.yolo_seg_detector.detect(img, conf=0.5, iou=0.5)
+        vis_image = self.yolo_seg_detector.visualize(img, masks, results, mask_alpha=0.5)
+        quad_corners = self.yolo_seg_detector.mask_to_quadrilateral(masks[0], method='min_area_rect')
+        cv2.drawContours(vis_image, [quad_corners.astype(int)], -1, (0, 0, 255), 2)
+        # print(quad_corners)
+        points = []
+        for i in range(4):
+            points.append((int(quad_corners[i][0]), int(quad_corners[i][1])))
+        print(points)
+        # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/result.jpg", vis_image)
+        return points, vis_image
+
     def selfLightness_split(self,img):
         gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         top_left_image, top_right_image, bottom_left_image, bottom_right_image = self.self_lightness.split_image(gray_img)
@@ -88,3 +109,58 @@ class ImgProcess:
         return binary_img
     def mediaFilter(self,img):
         return self.media_filter.filter(img)
+
+if __name__ == "__main__":
+    img_process = ImgProcess(yolo="/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11/firsttrain_withledring/firsttrainledring/weights/best.pt",yoloseg="/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11_seg/seg_second_train/led_sys_seg/weights/best.pt")
+    folder_path = "/home/yjc/Project/rov_ws/underwater_dataset/images/first_capture/right"  # Linux/macOS
+    for filename in os.listdir(folder_path):
+        # 筛选 .jpg / .JPG（大小写兼容）
+        if filename.lower().endswith(".jpg"):
+            # 拼接完整路径
+            full_path = os.path.join(folder_path, filename)
+            img = cv2.imread(full_path)
+            dirname = filename.rsplit(".", 1)[0]
+            dirpath = f"/home/yjc/Project/rov_ws/src/vision4location/src/image_save/extrame_seg/{dirname}"
+            os.makedirs(dirpath, exist_ok=True)
+            
+            points, vis_image = img_process.GetRoI_seg(img)
+            print(points)
+            # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/vis_image.jpg", vis_image)
+            gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            roi_images = img_process.self_lightness.get_roi_image(gray_image, points)
+            binary_images = []
+            global_xy = []
+            for i, roi_image in enumerate(roi_images): 
+                extrema = img_process.extrema_detector.detect(roi_image)
+                y, x = extrema["max_positions"]
+                cv2.circle(roi_image, (int(x), int(y)), 2, (0, 0, 255), 3)  # red for max
+                global_x = x - 15 + points[i][0]
+                global_y = y - 15 + points[i][1]
+                global_xy.append((global_x,global_y))
+                binary_images.append(roi_image)
+                cv2.circle(img, (int(global_x), int(global_y)), 2, (0, 0, 255), 2)
+            # composite_image = img_process.self_lightness.combine_rois(points, binary_images, gray_image.shape, side_length_or_diameter=30)
+                # cv2.circle(img,(int(global)))
+            # cv2.imwrite(f"{dirpath}/vis_image.jpg", vis_image)
+            # cv2.imwrite(f"{dirpath}/composite_image.jpg", composite_image)
+            # cv2.imwrite(f"{dirpath}/image1.jpg", roi_images[0])
+            # cv2.imwrite(f"{dirpath}/image2.jpg", roi_images[1])
+            # cv2.imwrite(f"{dirpath}/image3.jpg", roi_images[2])
+            # cv2.imwrite(f"{dirpath}/image4.jpg", roi_images[3])
+            cv2.imwrite(f"{dirpath}/image.jpg", img)
+
+
+
+
+    # cv2.imshow("composite_image", composite_image)
+    # cv2.imshow("image1", binary_images[0])
+    # cv2.imshow("image2", binary_images[1])
+    # cv2.imshow("image3", binary_images[2])
+    # cv2.imshow("image4", binary_images[3])
+    # cv2.waitKey(0)
+    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/composite_image.jpg", composite_image)
+    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/image1.jpg", roi_images[0])
+    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/image2.jpg", roi_images[1])
+    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/image3.jpg", roi_images[2])
+    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/image4.jpg", roi_images[3])
+    # cv2.waitKey(0)

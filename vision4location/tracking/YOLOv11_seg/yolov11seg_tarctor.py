@@ -18,7 +18,7 @@ from typing import Union, List, Tuple, Optional
 from pathlib import Path
 from ultralytics import YOLO
 import torch
-
+import os 
 
 class YOLOv11SegDetector:
     """
@@ -418,9 +418,9 @@ class YOLOv11SegDetector:
                  results: Optional[List[dict]] = None,
                  conf: Optional[float] = None,
                  iou: Optional[float] = None,
-                 show_labels: bool = True,
+                 show_labels: bool = False,
                  show_conf: bool = True,
-                 show_boxes: bool = True,
+                 show_boxes: bool = False,
                  show_masks: bool = True,
                  show_squares: bool = True,
                  mask_alpha: float = 0.5,
@@ -741,41 +741,50 @@ def main():
         iou_threshold=args.iou
     )
     
-    # 读取图像
-    image = cv2.imread(args.image)
-    if image is None:
-        print(f"错误: 无法读取图像 {args.image}")
-        return
-    
-    # 进行检测
-    print("正在进行分割检测...")
-    masks, results = detector.detect(image, conf=args.conf, iou=args.iou)
-    
-    print(f"检测到 {len(results)} 个目标")
-    for i, result in enumerate(results):
-        print(f"目标 {i+1}: {result['class_name']}, 置信度: {result['confidence']:.2f}")
-    
-    # 可视化结果
-    vis_image = detector.visualize(image, masks, results, mask_alpha=args.mask_alpha)
-    
-    # 将掩码拟合为四边形
-    if len(masks) > 0:
-        quad_corners = detector.mask_to_quadrilateral(masks[0], method='min_area_rect')
-        print(f"四边形四个点坐标: {quad_corners}")
-        
-        # 在图像上绘制四边形
-        cv2.drawContours(vis_image, [quad_corners.astype(int)], -1, (0, 0, 255), 2)
-    
-    # 保存或显示结果
-    if args.output:
-        cv2.imwrite(args.output, vis_image)
-        print(f"结果已保存到: {args.output}")
-    else:
-        cv2.imshow("result", vis_image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+    video_path = "/home/yjc/Project/rov_ws/underwater_dataset/videos/first_capture/stereo_capture_left_20251212_131140.mp4"
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print("错误：无法打开视频文件！")
+        exit()
+    img_name_count = 0
+    while cap.isOpened():
+        # 读取单帧（ret=True表示读取成功，frame为帧数据（BGR格式））
+        ret, frame = cap.read()
+        if not ret:  # 读取完毕（或出错），退出循环
+            print("视频读取完毕/出错")
+            break
+
+        masks, results = detector.detect(frame, conf=args.conf, iou=args.iou)
+        vis_image = detector.visualize(frame, masks, results, mask_alpha=args.mask_alpha)
+
+        if len(masks) > 0:  
+            img_name_count += 1
+            quad_corners = detector.mask_to_quadrilateral(masks[0], method='min_area_rect')
+            cv2.drawContours(vis_image, [quad_corners.astype(int)], -1, (0, 0, 255), 2)
+            # cv2.imshow("result", vis_image)
+            cv2.imwrite(f"/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11_seg/test/{img_name_count}.jpg", vis_image)
+        else:
+            cv2.imshow("result", frame)
+        cv2.waitKey(3)
+
+    cap.release()
+    # cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
-    main()
-
+    # main()
+    folder_path = "/home/yjc/Project/rov_ws/underwater_dataset/images/first_capture/right"  # Linux/macOS
+    detector = YOLOv11SegDetector(
+        model_path="/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11_seg/seg_second_train/led_sys_seg/weights/best.pt",
+        conf_threshold=0.45,
+        iou_threshold=0.45
+    )
+    for filename in os.listdir(folder_path):
+        # 筛选 .jpg / .JPG（大小写兼容）
+        if filename.lower().endswith(".jpg"):
+            # 拼接完整路径
+            full_path = os.path.join(folder_path, filename)
+            img = cv2.imread(full_path)
+            masks, results = detector.detect(img, conf=0.45, iou=0.45)
+            vis_image = detector.visualize(img, masks, results, mask_alpha=0.5)
+            cv2.imwrite(f"/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11_seg/right_seg/{filename}", vis_image)
