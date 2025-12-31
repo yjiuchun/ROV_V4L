@@ -176,78 +176,7 @@ class YOLOv11Detector:
                 detection_results.append(detection_result)
         
         return detection_results,self.box,x1
-    
-    def detect_batch(self, images: List[Union[np.ndarray, str, Path]],
-                    conf: Optional[float] = None,
-                    iou: Optional[float] = None,
-                    classes: Optional[List[int]] = None) -> List[List[dict]]:
-        """
-        批量检测图像
-        
-        参数:
-            images: 图像列表
-            conf: 置信度阈值
-            iou: IoU阈值
-            classes: 类别ID列表
-        
-        返回:
-            results_list: 每个图像对应的检测结果列表
-        """
-        # 读取所有图像
-        img_list = []
-        for img in images:
-            if isinstance(img, (str, Path)):
-                img_array = cv2.imread(str(img))
-                if img_array is None:
-                    raise ValueError(f"无法读取图像: {img}")
-                img_list.append(img_array)
-            elif isinstance(img, np.ndarray):
-                img_list.append(img.copy())
-            else:
-                raise TypeError(f"不支持的图像类型: {type(img)}")
-        
-        # 使用指定的阈值或默认阈值
-        conf_thresh = conf if conf is not None else self.conf_threshold
-        iou_thresh = iou if iou is not None else self.iou_threshold
-        
-        # 批量检测
-        results = self.model.predict(
-            img_list,
-            conf=conf_thresh,
-            iou=iou_thresh,
-            classes=classes,
-            imgsz=self.imgsz,
-            device=self.device,
-            verbose=False
-        )
-        
-        # 解析所有结果
-        all_results = []
-        for result in results:
-            boxes = result.boxes
-            detection_results = []
-            
-            for i in range(len(boxes)):
-                box = boxes.xyxy[i].cpu().numpy()
-                x1, y1, x2, y2 = box
-                corners = self._xyxy_to_corners(x1, y1, x2, y2)
-                confidence = float(boxes.conf[i].cpu().numpy())
-                class_id = int(boxes.cls[i].cpu().numpy())
-                class_name = self.model.names[class_id]
-                
-                detection_result = {
-                    'corners': corners,
-                    'confidence': confidence,
-                    'class_id': class_id,
-                    'class_name': class_name,
-                    'bbox': box.tolist()
-                }
-                detection_results.append(detection_result)
-            
-            all_results.append(detection_results)
-        
-        return all_results
-    
+ 
     def visualize(self, image: Union[np.ndarray, str, Path],
                  detections: Optional[List[dict]] = None,
                  conf: Optional[float] = None,

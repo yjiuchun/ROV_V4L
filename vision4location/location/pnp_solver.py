@@ -88,5 +88,9 @@ class PnPSolver:
 
 
 if __name__ == '__main__':
-        
+    pnp_solver = PnPSolver()
+    image_points = np.array([[244.34177215189874, 156.34177215189874], [369.0223880597015, 159.29850746268656], [364.36893203883494, 281.9611650485437], [241.40495867768595, 280.75206611570246]])
+    rvec, tvec = pnp_solver.solve_pnp(image_points)
+    print(rvec)
+    print(tvec)
     pass

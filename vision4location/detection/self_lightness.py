@@ -129,7 +129,7 @@ class SelfLightness:
 
     def binary_image(self,gray_img):
 
-        self.threshold = self.get_lightness_peak(gray_img)-10+self.get_binary_offset(gray_img) * 0
+        self.threshold = self.get_lightness_peak(gray_img)-25+self.get_binary_offset(gray_img) * 0
         # print(self.threshold)
         # 阈值分割
         _, binary_img = cv2.threshold(gray_img, self.threshold, 255, cv2.THRESH_BINARY)

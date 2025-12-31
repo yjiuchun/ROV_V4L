@@ -5,7 +5,7 @@ model = YOLO("yolo11n-seg.pt")  # 也可加载自定义权重：YOLO("runs/segme
 
 # 2. 开始训练
 results = model.train(
-    data="/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11_seg/dataset_1.yaml",  # 数据集配置文件路径
+    data="/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11_seg/dataset2.yaml",  # 数据集配置文件路径
     epochs=100,           # 训练轮数
     batch=8,              # 批次大小（自动适配GPU显存，建议设为-1自动批量）
     imgsz=640,            # 输入图片尺寸
@@ -17,8 +17,8 @@ results = model.train(
     val=True,             # 训练中验证（默认开启）
     augment=True,         # 数据增强（默认开启）
     workers=4,            # 数据加载线程数
-    project="/home/yjc/Project/rov_ws/src/vision4location/tracking/YOLOv11_seg/seg_second_train",  # 结果保存根目录
-    name="led_sys_seg",           # 实验名称
+    project="/home/yjc/Project/rov_ws/dataset/清水led双目/temp4train_simple/run",  # 结果保存根目录
+    name="ledseg",           # 实验名称
     exist_ok=True         # 覆盖已有实验目录
 )
 

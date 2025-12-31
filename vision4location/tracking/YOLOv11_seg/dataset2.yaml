@@ -1,0 +1,10 @@
+# 数据集根路径（绝对路径/相对路径均可）
+path: /home/yjc/Project/rov_ws/dataset/清水led双目/temp4train_simple
+# 训练/验证/测试集路径（相对于path）
+train: images/train
+val: images/val
+
+# 类别数
+nc: 1
+# 类别名称（与class_id一一对应）
+names: ['led']  

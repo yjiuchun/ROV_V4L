@@ -114,62 +114,49 @@ class ImgProcess:
 
 if __name__ == "__main__":
     img_process = ImgProcess(yoloseg="/home/yjc/Project/rov_ws/dataset/清水led双目/temp4train_simple/run/ledseg/weights/best.pt")
-    folder_path = "/home/yjc/Project/rov_ws/dataset/清水led双目/images/left/left5"  # Linux/macOS
-    count = 0
-    for filename in os.listdir(folder_path):
-        count += 1
-        # 筛选 .jpg / .JPG（大小写兼容）
-        if filename.lower().endswith(".jpg"):
-            # 拼接完整路径
-            full_path = os.path.join(folder_path, filename)
-            img = cv2.imread(full_path)
-            dirname = filename.rsplit(".", 1)[0]
-            dirpath = f"/home/yjc/Project/rov_ws/dataset/清水led双目/detected/left_binary/left5_imgs"
-            os.makedirs(dirpath, exist_ok=True)
-            points = []
-            points, vis_image = img_process.GetRoI_seg(img)
-            if points == []:
-                continue
-            print(points)
-            # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/vis_image.jpg", vis_image)
-            gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            roi_images = img_process.self_lightness.get_roi_image(gray_image, points)
-            binary_images = []
-            global_xy = []
-            for i, roi_image in enumerate(roi_images): 
-                binary_roi_image = img_process.self_lightness.binary_image(roi_image)
-                extrema = img_process.extrema_detector.detect(binary_roi_image)
-                y, x = extrema["max_positions"]
-                # cv2.circle(roi_image, (int(x), int(y)), 2, (0, 0, 255), 3)  # red for max
-                global_x = x - 15 + points[i][0]
-                global_y = y - 15 + points[i][1]
-                global_xy.append((global_x,global_y))
-                binary_images.append(binary_roi_image)
-                cv2.circle(img, (int(global_x), int(global_y)), 2, (0, 0, 255), 2)
-            # print(global_xy)
-            # break
-            # composite_image = img_process.self_lightness.combine_rois(points, binary_images, gray_image.shape, side_length_or_diameter=30)
-            #     cv2.circle(img,(int(global)))
-            # cv2.imwrite(f"{dirpath}/vis_image.jpg", vis_image)
-            # cv2.imwrite(f"{dirpath}/composite_image.jpg", composite_image)
-            # cv2.imwrite(f"{dirpath}/{count}_image1.jpg", binary_images[0])
-            # cv2.imwrite(f"{dirpath}/{count}_image2.jpg", binary_images[1])
-            # cv2.imwrite(f"{dirpath}/{count}_image3.jpg", binary_images[2])
-            # cv2.imwrite(f"{dirpath}/{count}_image4.jpg", binary_images[3])
-            cv2.imwrite(f"{dirpath}/{count}.jpg", img)
+    folder_path = "/home/yjc/Project/rov_ws/dataset/清水led双目/images/left/left3"  # Linux/macOS
+    img = cv2.imread("/home/yjc/Project/rov_ws/dataset/清水led双目/detected/leftwithout_redp/left2/490/image1.jpg")
+
+    binary_img = img_process.self_lightness.binary_image(img)
+    cv2.imshow("binary_img", binary_img)
+    cv2.waitKey(0)
 
 
 
-
-    # cv2.imshow("composite_image", composite_image)
-    # cv2.imshow("image1", binary_images[0])
-    # cv2.imshow("image2", binary_images[1])
-    # cv2.imshow("image3", binary_images[2])
-    # cv2.imshow("image4", binary_images[3])
-    # cv2.waitKey(0)
-    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/composite_image.jpg", composite_image)
-    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/image1.jpg", roi_images[0])
-    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/image2.jpg", roi_images[1])
-    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/image3.jpg", roi_images[2])
-    # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/image4.jpg", roi_images[3])
-    # cv2.waitKey(0)
+    # for filename in os.listdir(folder_path):
+    #     # 筛选 .jpg / .JPG（大小写兼容）
+    #     if filename.lower().endswith(".jpg"):
+    #         # 拼接完整路径
+    #         full_path = os.path.join(folder_path, filename)
+    #         img = cv2.imread(full_path)
+    #         dirname = filename.rsplit(".", 1)[0]
+    #         dirpath = f"/home/yjc/Project/rov_ws/dataset/清水led双目/detected/left/left1/{dirname}"
+    #         os.makedirs(dirpath, exist_ok=True)
+    #         points = []
+    #         points, vis_image = img_process.GetRoI_seg(img)
+    #         if points == []:
+    #             continue
+    #         print(points)
+    #         # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/vis_image.jpg", vis_image)
+    #         gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    #         roi_images = img_process.self_lightness.get_roi_image(gray_image, points)
+    #         binary_images = []
+    #         global_xy = []
+    #         for i, roi_image in enumerate(roi_images): 
+    #             extrema = img_process.extrema_detector.detect(roi_image)
+    #             y, x = extrema["max_positions"]
+    #             cv2.circle(roi_image, (int(x), int(y)), 2, (0, 0, 255), 3)  # red for max
+    #             global_x = x - 15 + points[i][0]
+    #             global_y = y - 15 + points[i][1]
+    #             global_xy.append((global_x,global_y))
+    #             binary_images.append(roi_image)
+    #             cv2.circle(img, (int(global_x), int(global_y)), 2, (0, 0, 255), 2)
+    #         # composite_image = img_process.self_lightness.combine_rois(points, binary_images, gray_image.shape, side_length_or_diameter=30)
+    #         #     cv2.circle(img,(int(global)))
+    #         # cv2.imwrite(f"{dirpath}/vis_image.jpg", vis_image)
+    #         # cv2.imwrite(f"{dirpath}/composite_image.jpg", composite_image)
+    #         cv2.imwrite(f"{dirpath}/image1.jpg", roi_images[0])
+    #         cv2.imwrite(f"{dirpath}/image2.jpg", roi_images[1])
+    #         cv2.imwrite(f"{dirpath}/image3.jpg", roi_images[2])
+    #         cv2.imwrite(f"{dirpath}/image4.jpg", roi_images[3])
+    #         cv2.imwrite(f"{dirpath}/image.jpg", img)
