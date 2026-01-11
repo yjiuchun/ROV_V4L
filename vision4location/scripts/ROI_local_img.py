@@ -140,9 +140,19 @@ class ROISegmenter:
         # 提取矩形区域
         roi_rect = image[y1:y2, x1:x2].copy()
         
+        # 检查区域是否有效
+        if roi_rect.size == 0:
+            # 返回空数组，保持与输入图像相同的通道数
+            if len(image.shape) == 3:
+                return np.zeros((0, 0, image.shape[2]), dtype=image.dtype)
+            else:
+                return np.zeros((0, 0), dtype=image.dtype)
+        
         # 创建圆形掩码
         roi_h, roi_w = roi_rect.shape[:2]
         mask = np.zeros((roi_h, roi_w), dtype=np.uint8)
+        # 确保 mask 是连续的数组（OpenCV 4.12+ 要求）
+        mask = np.ascontiguousarray(mask)
         
         # 计算在ROI矩形内的圆心坐标
         local_center_x = center_x - x1
@@ -247,9 +257,20 @@ class ROISegmenter:
         y2 = min(h, center_y + radius)
         
         roi_rect = image[y1:y2, x1:x2].copy()
+        
+        # 检查区域是否有效
+        if roi_rect.size == 0:
+            # 返回空数组
+            if len(image.shape) == 3:
+                return np.zeros((0, 0, image.shape[2]), dtype=image.dtype), np.zeros((0, 0), dtype=np.uint8)
+            else:
+                return np.zeros((0, 0), dtype=image.dtype), np.zeros((0, 0), dtype=np.uint8)
+        
         roi_h, roi_w = roi_rect.shape[:2]
         
         mask = np.zeros((roi_h, roi_w), dtype=np.uint8)
+        # 确保 mask 是连续的数组（OpenCV 4.12+ 要求）
+        mask = np.ascontiguousarray(mask)
         local_center_x = center_x - x1
         local_center_y = center_y - y1
         cv2.circle(mask, (local_center_x, local_center_y), radius, 255, -1)
@@ -467,6 +488,8 @@ class ROISegmenter:
         
         # 创建圆形掩码（使用目标区域大小）
         mask = np.zeros((target_h, target_w), dtype=np.uint8)
+        # 确保 mask 是连续的数组（OpenCV 4.12+ 要求）
+        mask = np.ascontiguousarray(mask)
         
         # 计算在patch中的圆心坐标
         local_center_x = center_x - x1

@@ -62,6 +62,7 @@ from yolov11_tarctor import YOLOv11Detector
 from yolov11seg_tarctor import YOLOv11SegDetector
 from self_lightness import SelfLightness
 from MdeiaFilter import MediaFilter
+from pnp_solver import PnPSolver
 class ImgProcess:
     def __init__(self,yolo="yolo11n.pt",yoloseg="yolo11n-seg.pt"):
 
@@ -70,6 +71,7 @@ class ImgProcess:
         self.self_lightness = SelfLightness(show_image=False)          # 照度检测
         self.media_filter = MediaFilter()                              # 图像滤波
         self.extrema_detector = ExtremaDetector()                      # 极值点检测
+        self.pnp_solver = PnPSolver()                                  # PnP求解器
     def GetRoI(self, img):
         start_time = time.time()
         results,box,x_offset = self.yolo_detector.detect(img)
@@ -86,6 +88,8 @@ class ImgProcess:
         vis_image = self.yolo_seg_detector.visualize(img, masks, results, mask_alpha=0.5)
         # cv2.imshow("vis_image", vis_image)
         # cv2.waitKey(0)
+        if len(masks) == 0:
+            return [], None
         quad_corners = self.yolo_seg_detector.mask_to_quadrilateral(masks[0], method='min_area_rect')
         cv2.drawContours(vis_image, [quad_corners.astype(int)], -1, (0, 0, 255), 2)
         # print(quad_corners)
@@ -130,7 +134,6 @@ if __name__ == "__main__":
             points, vis_image = img_process.GetRoI_seg(img)
             if points == []:
                 continue
-            print(points)
             # cv2.imwrite("/home/yjc/Project/rov_ws/src/vision4location/src/image_save/seg/test/vis_image.jpg", vis_image)
             gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             roi_images = img_process.self_lightness.get_roi_image(gray_image, points)

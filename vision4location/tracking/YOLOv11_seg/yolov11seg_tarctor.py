@@ -119,7 +119,7 @@ class YOLOv11SegDetector:
         for result in results:
             # 检查是否有分割结果
             if result.masks is None:
-                print("警告: 未检测到分割结果")
+                # print("警告: 未检测到分割结果")
                 return [], []
             
             boxes = result.boxes

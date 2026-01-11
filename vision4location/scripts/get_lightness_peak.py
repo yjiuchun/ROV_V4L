@@ -76,6 +76,10 @@ class GetLightnessPeak:
         else:
             raise TypeError(f"不支持的类型: {type(image_or_path)}")
         
+        # 检查图像是否为空
+        if gray_image.size == 0:
+            raise ValueError("输入图像为空（大小为0），无法处理")
+        
         self.gray_image = gray_image
         return gray_image
     
@@ -92,6 +96,14 @@ class GetLightnessPeak:
         """
         # 加载图片
         gray_img = self._load_image(image_or_path)
+        
+        # 检查图像是否为空（双重检查）
+        if gray_img.size == 0:
+            # 返回空列表并设置默认值
+            self.max_value = 0
+            self.max_positions = np.array([], dtype=int).reshape(0, 2)
+            self.max_x_list = []
+            return []
         
         # 找到图像中的最大值
         max_value = gray_img.max()
@@ -173,40 +185,46 @@ class GetLightnessPeak:
         min_z_list = []
         
         if mark_extrema:
-            max_value = original_image.max()
-            min_value = original_image.min()
-            
-            # 找到所有最大值和最小值的位置
-            max_mask = original_image == max_value
-            min_mask = original_image == min_value
-            
-            # 获取所有极值点的坐标 (y, x)
-            max_positions = np.argwhere(max_mask)
-            min_positions = np.argwhere(min_mask)
-            
-            extrema_info = {
-                'max_value': max_value,
-                'max_positions': max_positions.tolist(),
-                'min_value': min_value,
-                'min_positions': min_positions.tolist()
-            }
-            
-            # 将原始坐标转换为下采样后的坐标
-            for y_orig, x_orig in max_positions:
-                x_down = x_orig // downsample
-                y_down = y_orig // downsample
-                if 0 <= x_down < width and 0 <= y_down < height:
-                    max_x_list.append(x_down)
-                    max_y_list.append(y_down)
-                    max_z_list.append(gray_image[y_down, x_down])
-            
-            for y_orig, x_orig in min_positions:
-                x_down = x_orig // downsample
-                y_down = y_orig // downsample
-                if 0 <= x_down < width and 0 <= y_down < height:
-                    min_x_list.append(x_down)
-                    min_y_list.append(y_down)
-                    min_z_list.append(gray_image[y_down, x_down])
+            # 检查图像是否为空
+            if original_image.size == 0:
+                # 如果图像为空，跳过极值点标记
+                mark_extrema = False
+                extrema_info = None
+            else:
+                max_value = original_image.max()
+                min_value = original_image.min()
+                
+                # 找到所有最大值和最小值的位置
+                max_mask = original_image == max_value
+                min_mask = original_image == min_value
+                
+                # 获取所有极值点的坐标 (y, x)
+                max_positions = np.argwhere(max_mask)
+                min_positions = np.argwhere(min_mask)
+                
+                extrema_info = {
+                    'max_value': max_value,
+                    'max_positions': max_positions.tolist(),
+                    'min_value': min_value,
+                    'min_positions': min_positions.tolist()
+                }
+                
+                # 将原始坐标转换为下采样后的坐标
+                for y_orig, x_orig in max_positions:
+                    x_down = x_orig // downsample
+                    y_down = y_orig // downsample
+                    if 0 <= x_down < width and 0 <= y_down < height:
+                        max_x_list.append(x_down)
+                        max_y_list.append(y_down)
+                        max_z_list.append(gray_image[y_down, x_down])
+                
+                for y_orig, x_orig in min_positions:
+                    x_down = x_orig // downsample
+                    y_down = y_orig // downsample
+                    if 0 <= x_down < width and 0 <= y_down < height:
+                        min_x_list.append(x_down)
+                        min_y_list.append(y_down)
+                        min_z_list.append(gray_image[y_down, x_down])
         
         # 根据模式选择可视化方式
         if mode == 'surface':

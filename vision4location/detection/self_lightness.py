@@ -128,7 +128,11 @@ class SelfLightness:
         return final_sorted  # 返回排序结果和中心
 
     def binary_image(self,gray_img):
-
+        # 检查图像是否为空
+        if gray_img.size == 0:
+            # 返回与输入相同形状的空图像
+            return np.zeros_like(gray_img)
+        
         self.threshold = self.get_lightness_peak(gray_img)-25+self.get_binary_offset(gray_img) * 0
         # print(self.threshold)
         # 阈值分割

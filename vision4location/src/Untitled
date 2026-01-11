@@ -1,0 +1,1 @@
+    rvec, tvec = pnp_solver.solve_pnp(image_points)
